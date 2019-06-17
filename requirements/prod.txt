@@ -1,0 +1,6 @@
+pyyaml
+ipython
+pint
+numpy
+plotly
+papermill

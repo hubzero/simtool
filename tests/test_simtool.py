@@ -9,9 +9,7 @@ Tests for `simtool` module.
 """
 
 import pytest
-
-
-from simtool import simtool
+import simtool
 
 
 @pytest.fixture
