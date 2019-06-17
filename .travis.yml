@@ -6,5 +6,9 @@ env:
 install: pip install -U tox
 script: tox -e ${TOXENV}
 deploy:
+  provider: pypi
+  user: "martin-hunt"
   password:
     secure: lVsMxLvqAPnEaFkJb7NMGMP12KJ1SqsOmqM3M+rFCXwEhs0+jqfsor8Yj3jETWKlBSa6nNCRa9lND238NLPmEPk4i5/mW2AkWy2FB96ExFxQviK4VwMxwOGWxL1mjIW7xmi0OADaqZlKhrLENMiQmLMRkKdRPoLAHbqOzaxTKegreK+3VkwqDAl0ILoMJhmUQM5+F4i9rWs7rtK1SHlrNOsbDxW3ibzbtS4+n2w0MGEcKudHpuy4wDz059PxvsaLfE3hSwslGH9WTW+g0e8Ilvbzg+9gZBJe+4vHiu25Vpb0s15s5ylCwnl2Cp7XKgIbtUyn9XXL/hH0HjoxTULJrAi3tAIWFx4IzviEZMV1YkJ4PuY4uFfG+nOsmqKE9fT/sQjUdA0jqYRU57GKM5djed6O1CMAWHGkPcHo/R8CjpzxHkBzH48oFMyH0hX1TPB/SDcpd7Mzs2mpMmjb4BZ2Ba+jntZci2SCDLDHjntzuNWQaUyx+kOLWl1fQv6J7P7jX1y4LJ5fZziZoHP0Orq8+cH+OyJ/WjJmeoOdJUcfKYMBBkQCyuZ6gfjeRdWmyqb06l8MWxk78Ow9Locr5I9qN+4rIFJqLG3qLdMrEiCfWhCggzppoQEzmCa1ByGiexgkzqHU71Oucih0uWcbHanAJyMYMKb5wI31z7ksmSCrqIY=
+  on:
+    tags: true
