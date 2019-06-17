@@ -24,7 +24,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author="Martin Hunt",
     author_email='mmh@purdue.edu',
-    url='https://github.com/martin-hunt/simtool',
+    url='https://github.com/hubzero/simtool',
     packages=[
         'simtool',
     ],

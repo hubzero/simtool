@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/martin-hunt/simtool
+    $ git clone git://github.com/hubzero/simtool
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/martin-hunt/simtool/tarball/master
+    $ curl  -OL https://github.com/hubzero/simtool/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/martin-hunt/simtool
-.. _tarball: https://github.com/martin-hunt/simtool/tarball/master
+.. _Github repo: https://github.com/hubzero/simtool
+.. _tarball: https://github.com/hubzero/simtool/tarball/master

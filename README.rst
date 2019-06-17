@@ -6,15 +6,15 @@ SimTool
 .. image:: https://img.shields.io/pypi/v/simtool.svg
         :target: https://pypi.python.org/pypi/simtool
 
-.. image:: https://img.shields.io/travis/martin-hunt/simtool.svg
-        :target: https://travis-ci.org/martin-hunt/simtool
+.. image:: https://img.shields.io/travis/hubzero/simtool.svg
+        :target: https://travis-ci.org/hubzero/simtool
 
 .. image:: https://readthedocs.org/projects/simtool/badge/?version=latest
         :target: https://simtool.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/martin-hunt/simtool/shield.svg
-     :target: https://pyup.io/repos/github/martin-hunt/simtool/
+.. image:: https://pyup.io/repos/github/hubzero/simtool/shield.svg
+     :target: https://pyup.io/repos/github/hubzero/simtool/
      :alt: Updates
 
 
