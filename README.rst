@@ -13,11 +13,6 @@ SimTool
         :target: https://simtool.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/hubzero/simtool/shield.svg
-     :target: https://pyup.io/repos/github/hubzero/simtool/
-     :alt: Updates
-
-
 Functions for creating and running Simulation Tools
 
 
