@@ -2,5 +2,7 @@ pyyaml
 ipython
 pint
 numpy
-plotly
 papermill
+jsonpickle
+mendeleev
+pillow
