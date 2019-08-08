@@ -6,3 +6,4 @@ papermill
 jsonpickle
 mendeleev
 pillow
+nteract-scrapbook
