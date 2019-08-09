@@ -19,7 +19,7 @@ test_requirements = [
 
 setup(
     name='simtool',
-    version='0.1.0',
+    version='0.1.1',
     description="Functions for creating and running Simulation Tools",
     long_description=readme + '\n\n' + history,
     author="Martin Hunt",
@@ -40,13 +40,12 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     test_suite='tests',
     tests_require=test_requirements
