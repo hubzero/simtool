@@ -10,11 +10,7 @@ from .datastore import FileDataStore
 from .utils import _find_simtool, _get_dict, _get_extra_files
 
 class Run:
-
-    ds_handler = FileDataStore  # local files or NFS
-
-    def __init__(self, simtool_name, inputs, run_name=None, cache=True):
-        """Runs a SimTool.
+    """Runs a SimTool.
 
         A copy of the SimTool will be created in the subdirectory with the same
         name as the current experiment.  It will be run with the provided inputs.
@@ -31,9 +27,10 @@ class Run:
             cache:  If the SimTool was run with the same inputs previously, return
                 the results from the cache.  Otherwise cache the results.  If this
                 parameter is False, do neither of these.
-        Returns:
-
         """
+    ds_handler = FileDataStore  # local files or NFS
+
+    def __init__(self, simtool_name, inputs, run_name=None, cache=True):
         simtool_path, simtool_name, published = _find_simtool(simtool_name)
         self.inputs = copy.deepcopy(inputs)
         self.input_dict = _get_dict(self.inputs)
@@ -68,9 +65,6 @@ class Run:
 
         self.outname = os.path.join(self.outdir, simtool_name+'.ipynb')
         # FIXME: run in background. wait or check status.
-        # FIXME: check cache.  set cache status in Run object
-        # FIXME: run_name is for local use only.  artifact store uses uuid
-        # use toolname and inputs to query cache.
 
         self.cached = False
         if cache:
