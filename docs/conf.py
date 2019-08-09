@@ -40,7 +40,10 @@ import simtool
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.autodoc', 
+              'sphinx.ext.viewcode', 
+              'sphinx.ext.napoleon',
+              'nbsphinx']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -56,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'SimTool'
-copyright = u"2019, Martin Hunt"
+copyright = u"2019, HUBzero Foundation"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -79,7 +82,7 @@ release = simtool.__version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -111,7 +114,12 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+#html_theme = 'sphinx_rtd_theme'
+#html_theme = 'default'
+
+import sphinx_py3doc_enhanced_theme
+html_theme = "sphinx_py3doc_enhanced_theme"
+html_theme_path = [sphinx_py3doc_enhanced_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
@@ -210,7 +218,7 @@ latex_elements = {
 latex_documents = [
     ('index', 'simtool.tex',
      u'SimTool Documentation',
-     u'Martin Hunt', 'manual'),
+     u'HUBzero Foundation', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at
@@ -241,7 +249,7 @@ latex_documents = [
 man_pages = [
     ('index', 'simtool',
      u'SimTool Documentation',
-     [u'Martin Hunt'], 1)
+     [u'HUBzero Foundation, LLC'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -256,7 +264,7 @@ man_pages = [
 texinfo_documents = [
     ('index', 'simtool',
      u'SimTool Documentation',
-     u'Martin Hunt',
+     u'HUBzero Foundation, LLC',
      'simtool',
      'One line description of project.',
      'Miscellaneous'),
