@@ -6,3 +6,5 @@ watchdog
 flake8
 Sphinx
 twine
+nbsphinx
+sphinx_py3doc_enhanced_theme

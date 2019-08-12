@@ -45,7 +45,7 @@ class Run:
         self.outdir = os.path.join(get_experiment(), run_name) 
         os.makedirs(self.outdir)
 
-        # FIXME: don't do this if cached
+        # FIXME: cache file operation belong in datastore.py
         sdir = os.path.dirname(simtool_path)
         if published:
             # We want to allow simtools to be more than just the notebook,
@@ -55,7 +55,7 @@ class Run:
             os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
         else:
             files = _get_extra_files(simtool_path)
-            print("EXTRA FILES:", files)
+            # print("EXTRA FILES:", files)
             if files == "*":
                 call("cp -sRf %s/* %s" % (sdir, self.outdir), shell=True)
                 os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
@@ -82,6 +82,10 @@ class Run:
                 # copy notebook to data store
                 os.makedirs(self.dstore.rdir)
                 call('/bin/cp -prL %s/* %s' % (self.outdir, self.dstore.rdir), shell=True)
+                call('chmod -R g+w %s' % self.dstore.rdir, shell=True)
+                # FIXME: should be config option in datasore
+                call('chown -R :strachangroup %s' % self.dstore.rdir, shell=True)
+
 
         self.db = DB(self.outname, dir=self.outdir)
 
