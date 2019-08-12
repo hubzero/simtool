@@ -2,6 +2,9 @@
 Usage
 =====
 
-To use SimTool in a project::
+Contents:
 
-    import simtool
+.. toctree::
+   :maxdepth: 2
+
+   usage/basic.ipynb
