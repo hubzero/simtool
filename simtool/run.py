@@ -27,8 +27,11 @@ class Run:
             cache:  If the SimTool was run with the same inputs previously, return
                 the results from the cache.  Otherwise cache the results.  If this
                 parameter is False, do neither of these.
+
+        Returns:
+            A Run object.
         """
-    ds_handler = FileDataStore  # local files or NFS
+    ds_handler = FileDataStore  # local files or NFS.  should be config option
 
     def __init__(self, simtool_name, inputs, run_name=None, cache=True):
         simtool_path, simtool_name, published = _find_simtool(simtool_name)
@@ -37,55 +40,42 @@ class Run:
 
         if cache:
             self.dstore = Run.ds_handler(simtool_name, self.input_dict, published)
-            # print("Created cache: ", self.dstore.rdir)
 
         if run_name is None:
             run_name = str(uuid.uuid4()).replace('-', '')
         self.run_name = run_name
         self.outdir = os.path.join(get_experiment(), run_name) 
         os.makedirs(self.outdir)
-
-        # FIXME: cache file operation belong in datastore.py
-        sdir = os.path.dirname(simtool_path)
-        if published:
-            # We want to allow simtools to be more than just the notebook,
-            # so we recursively copy the notebook directory.
-            call("cp -sRf %s/* %s" % (sdir, self.outdir), shell=True)
-            # except the notebook itself
-            os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
-        else:
-            files = _get_extra_files(simtool_path)
-            # print("EXTRA FILES:", files)
-            if files == "*":
-                call("cp -sRf %s/* %s" % (sdir, self.outdir), shell=True)
-                os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
-            elif files is not None:
-                for f in files:
-                    os.symlink(os.path.abspath(os.path.join(sdir, f)), os.path.join(self.outdir, f))
-
         self.outname = os.path.join(self.outdir, simtool_name+'.ipynb')
-        # FIXME: run in background. wait or check status.
 
         self.cached = False
         if cache:
-            if os.path.exists(self.dstore.rdir):
-                if published:
-                    print("CACHED. Fetching results from Data Store.")
-                else:
-                    print("CACHED. Fetching results from user cache. (%s)" % self.dstore.USER_FILEDIR)
-                call('/bin/cp -sRf %s/* %s' % (self.dstore.rdir, self.outdir), shell=True)
-                self.cached = True
+            self.cached = self.dstore.read_cache(self.outdir, published)
 
         if not self.cached:
+            # Prepare output directory by copying any files that the notebook
+            # depends on.
+            sdir = os.path.dirname(simtool_path)
+            if published:
+                # We want to allow simtools to be more than just the notebook,
+                # so we recursively copy the notebook directory.
+                call("cp -sRf %s/* %s" % (sdir, self.outdir), shell=True)
+                # except the notebook itself
+                os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
+            else:
+                files = _get_extra_files(simtool_path)
+                # print("EXTRA FILES:", files)
+                if files == "*":
+                    call("cp -sRf %s/* %s" % (sdir, self.outdir), shell=True)
+                    os.remove(os.path.join(self.outdir, simtool_name+'.ipynb'))
+                elif files is not None:
+                    for f in files:
+                        os.symlink(os.path.abspath(os.path.join(sdir, f)), os.path.join(self.outdir, f))
+
+            # FIXME: run in background. wait or check status.
             pm.execute_notebook(simtool_path, self.outname, parameters=self.input_dict, cwd=self.outdir)
             if cache:
-                # copy notebook to data store
-                os.makedirs(self.dstore.rdir)
-                call('/bin/cp -prL %s/* %s' % (self.outdir, self.dstore.rdir), shell=True)
-                call('chmod -R g+w %s' % self.dstore.rdir, shell=True)
-                # FIXME: should be config option in datasore
-                call('chown -R :strachangroup %s' % self.dstore.rdir, shell=True)
-
+                self.dstore.write_cache(self.outdir)
 
         self.db = DB(self.outname, dir=self.outdir)
 

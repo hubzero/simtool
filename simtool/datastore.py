@@ -1,6 +1,7 @@
 import os
 from joblib import Memory
 import uuid
+from subprocess import call
 
 class FileDataStore:
     """
@@ -19,7 +20,7 @@ class FileDataStore:
         else:
             self.cachedir = os.path.join(FileDataStore.USER_FILEDIR, simtool_name)
             self.cachetabdir = os.path.join(FileDataStore.USER_FILETABDIR, simtool_name)
-        
+
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
         
@@ -35,6 +36,24 @@ class FileDataStore:
             return fname
 
         self.rdir = os.path.join(self.cachedir, make_rname(inputs))
+
+    def read_cache(self, outdir, published):
+        # reads cache and copies contents to outdir
+        if os.path.exists(self.rdir):
+            if published:
+                print("CACHED. Fetching results from Data Store.")
+            else:
+                print("CACHED. Fetching results from user cache. (%s)" % self.USER_FILEDIR)
+            call('/bin/cp -sRf %s/* %s' % (self.rdir, outdir), shell=True)
+            return True
+        return False
+
+    def write_cache(self, sourcedir):
+        # copy notebook to data store
+        os.makedirs(self.rdir)
+        call('/bin/cp -prL %s/* %s' % (sourcedir, self.rdir), shell=True)
+        call('chmod -R g+w %s' % self.rdir, shell=True)
+        call('chown -R :strachangroup %s' % self.rdir, shell=True)
 
     @staticmethod
     def read(path, out_type=None):
