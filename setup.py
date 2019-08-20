@@ -9,9 +9,8 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [
-    # TODO: put package requirements here
-]
+requirements = ['ipython', 'pint', 'numpy', 'papermill', 'jsonpickle', 
+                'mendeleev', 'pillow', 'nteract-scrapbook', 'joblib']
 
 test_requirements = [
     # TODO: put package test requirements here
@@ -19,7 +18,7 @@ test_requirements = [
 
 setup(
     name='simtool',
-    version='0.1.2',
+    version='0.1.4',
     description="Functions for creating and running Simulation Tools",
     long_description=readme + '\n\n' + history,
     author="Martin Hunt",
