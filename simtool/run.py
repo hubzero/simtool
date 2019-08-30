@@ -173,9 +173,9 @@ class SubmitRun:
             # FIXME: run in background. show progress. wait or check status.
             cwd = os.getcwd()
             os.chdir(self.outdir)
-            includes = '-i ' + ' -i '.join([f for f in os.listdir() if f != localname])
             with open('inputs.yaml', 'w') as fp:
                 yaml.dump(self.input_dict, fp)
+            includes = '-i ' + ' -i '.join([f for f in os.listdir() if f != localname])
             cmd = f"submit {includes} anaconda-6_papermill -f inputs.yaml {localname} {localname}"
             print('cmd=', cmd)
             call(cmd, shell=True)
