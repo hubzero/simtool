@@ -168,7 +168,9 @@ class SubmitRun:
                     os.remove(os.path.join(self.outdir, localname))
                 elif files is not None:
                     for f in files:
-                        os.symlink(os.path.abspath(os.path.join(sdir, f)), os.path.join(self.outdir, f))
+                        if f != localname:
+                            os.symlink(os.path.abspath(os.path.join(sdir, f)), os.path.join(self.outdir, f))
+                call("cp %s %s" % (simtool_path, self.outdir), shell=True)
             
             # FIXME: run in background. show progress. wait or check status.
             cwd = os.getcwd()
