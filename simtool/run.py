@@ -85,8 +85,8 @@ class LocalRun:
             self.db = DB(self.outname,dir=self.outdir)
             self.savedOutputs     = self.db.getSavedOutputs()
             self.savedOutputFiles = self.db.getSavedOutputFiles()
-            if len(self.savedOutputFiles) > 0:
-                print("Saved output files: %s" % (self.savedOutputFiles))
+#           if len(self.savedOutputFiles) > 0:
+#               print("Saved output files: %s" % (self.savedOutputFiles))
 
             requiredOutputs  = set(self.outputs.keys())
             deliveredOutputs = set(self.savedOutputs)
@@ -102,9 +102,9 @@ class LocalRun:
                 print("The following additional outputs were returned: %s" % (list(extraOutputs)))
 
             simToolSaveErrorOccurred = self.db.getSimToolSaveErrorOccurred()
-            print("simToolSaveErrorOccurred = %d" % (simToolSaveErrorOccurred))
+#           print("simToolSaveErrorOccurred = %d" % (simToolSaveErrorOccurred))
             simToolAllOutputsSaved = self.db.getSimToolAllOutputsSaved()
-            print("simToolAllOutputsSaved = %d" % (simToolAllOutputsSaved))
+#           print("simToolAllOutputsSaved = %d" % (simToolAllOutputsSaved))
 
             if cache:
                 self.dstore.write_cache(self.outdir,prerunFiles,self.savedOutputFiles)
@@ -203,14 +203,16 @@ class SubmitLocalRun:
                print(traceback.format_exc())
             else:
                exitCode = result['exitCode']
+               if exitCode != 0:
+                   print("SimTool execution failed")
 
             os.chdir(cwd)
 
             self.db = DB(self.outname,dir=self.outdir)
             self.savedOutputs     = self.db.getSavedOutputs()
             self.savedOutputFiles = self.db.getSavedOutputFiles()
-            if len(self.savedOutputFiles) > 0:
-                print("Saved output files: %s" % (self.savedOutputFiles))
+#           if len(self.savedOutputFiles) > 0:
+#               print("Saved output files: %s" % (self.savedOutputFiles))
 
             requiredOutputs  = set(self.outputs.keys())
             deliveredOutputs = set(self.savedOutputs)
@@ -226,9 +228,9 @@ class SubmitLocalRun:
                 print("The following additional outputs were returned: %s" % (list(extraOutputs)))
 
             simToolSaveErrorOccurred = self.db.getSimToolSaveErrorOccurred()
-            print("simToolSaveErrorOccurred = %d" % (simToolSaveErrorOccurred))
+#           print("simToolSaveErrorOccurred = %d" % (simToolSaveErrorOccurred))
             simToolAllOutputsSaved = self.db.getSimToolAllOutputsSaved()
-            print("simToolAllOutputsSaved = %d" % (simToolAllOutputsSaved))
+#           print("simToolAllOutputsSaved = %d" % (simToolAllOutputsSaved))
 
             if cache:
                 self.dstore.write_cache(self.outdir,prerunFiles,self.savedOutputFiles)
@@ -293,7 +295,8 @@ class TrustedUserRun:
                 print(traceback.format_exc())
             else:
                 exitCode = result['exitCode']
-                print(result)
+                if exitCode == 0:
+                   print("Found cached result")
 
             self.cached = exitCode == 0
             if not self.cached:
@@ -309,7 +312,8 @@ class TrustedUserRun:
                     print(traceback.format_exc())
                 else:
                     exitCode = result['exitCode']
-                    print(result)
+                    if exitCode != 0:
+                        print("SimTool execution failed")
                 self.cached = exitCode == 0
 
                 if self.cached:
@@ -326,7 +330,8 @@ class TrustedUserRun:
                         print(traceback.format_exc())
                     else:
                         exitCode = result['exitCode']
-                        print(result)
+                        if exitCode != 0:
+                            print("Retrieval of generated cached result failed")
                 else:
 #                   Retrieve error result from ionhelper delivery
                     submitCommand = SubmitCommand()
@@ -341,7 +346,8 @@ class TrustedUserRun:
                         print(traceback.format_exc())
                     else:
                         exitCode = result['exitCode']
-                        print(result)
+                        if exitCode != 0:
+                            print("Retrieval of failed execution result failed")
 
             self.db = DB(self.outname,dir=self.outdir)
         else:
@@ -385,6 +391,15 @@ class Run:
 
     def __new__(cls,simToolLocation,inputs,run_name=None,cache=True,venue=None):
         # cls.__init__(cls,desc)
+        if venue is None:
+            if simToolLocation['published'] and cache:
+                venue = 'trusted'
+            else:
+                venue = 'local'
+
+        if simToolLocation['simToolRevision'] is None:
+            cache = False
+
         if   venue == 'local':
             newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
         elif venue == 'trusted' and cache: 

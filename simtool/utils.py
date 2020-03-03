@@ -134,110 +134,113 @@ def _getSimToolNotebookMetaData(nbPath):
 
 
 def findSimToolNotebook(simToolName,simToolRevision=None):
-    """Lookup simtool by name and revision.
+   """Lookup simtool by name and revision.
 
-    Returns:
-        A dictionary containing -
-            notebookPath    - the full path name of the simtool notebook,
-            simToolName     - the simtool shortname
-            simToolRevision - the simtool revision (if installed or published)
-            published       - boolean which is True if the notebook is published
-    """
-    simToolLocation = {}
-    simToolLocation['notebookPath']    = None
-    simToolLocation['simToolName']     = None
-    simToolLocation['simToolRevision'] = None
-    simToolLocation['published']       = None
+   Returns:
+       A dictionary containing -
+           notebookPath    - the full path name of the simtool notebook,
+           simToolName     - the simtool shortname
+           simToolRevision - the simtool revision (if installed or published)
+           published       - boolean which is True if the notebook is published
+   """
+   simToolLocation = {}
+   simToolLocation['notebookPath']    = None
+   simToolLocation['simToolName']     = None
+   simToolLocation['simToolRevision'] = None
+   simToolLocation['published']       = None
 
-    if   simToolRevision and not simToolName.endswith('.ipynb'):
-       simToolNotebook = os.path.basename(simToolName) + '.ipynb'
-       notebookPath = os.path.join(os.sep,'apps',simToolName,simToolRevision,'simtool',simToolNotebook)
-       if os.path.exists(notebookPath):
-          # look for installed or published revision in /apps/name/revision/simtool/
-          simToolLocation['notebookPath']    = notebookPath
-          simToolLocation['simToolName']     = simToolName
-          simToolLocation['simToolRevision'] = simToolRevision
-          # verify pubication status - sample published notebook reference to simtool
-          simToolNotebookMetaData = _getSimToolNotebookMetaData(notebookPath)
-          if simToolNotebookMetaData['name'] == simToolLocation['simToolName'] and \
-             simToolNotebookMetaData['revision'] == simToolLocation['simToolRevision'] and \
-             simToolNotebookMetaData['state'] == 'published':
-             simToolLocation['published'] = True
-          else:
-             simToolLocation['published'] = False
-       else:
-          notebookPath = os.path.join(simToolName,simToolRevision,'simtool',simToolNotebook)
-          if os.path.exists(notebookPath):
-              # look for notebook in name/revision/simtool/
-              simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
-              simToolLocation['simToolName']     = os.path.basename(simToolName)
-              simToolLocation['simToolRevision'] = simToolRevision
-              simToolLocation['published']       = False
-    elif not simToolName.endswith('.ipynb'):
-       # revision not specified
-       # look for latest published revision in /apps
-       simToolNotebook = os.path.basename(simToolName) + '.ipynb'
-       notebookPathPattern = os.path.join(os.sep,'apps',simToolName,'*','simtool',simToolNotebook)
-       newestRevision = 0
-       for notebookPath in glob.glob(notebookPathPattern):
-          revision = notebookPath.split(os.sep)[3]
-          if revision.startswith('r'):
-             simToolNotebookMetaData = _getSimToolNotebookMetaData(notebookPath)
-             if simToolNotebookMetaData['state'] == 'published':
-                revisionNumber = int(revision[1:])
-                if revisionNumber > newestRevision:
-                   newestRevision = revisionNumber
-                   simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
-                   simToolLocation['simToolName']     = os.path.basename(simToolName)
-                   simToolLocation['simToolRevision'] = revision
-                   simToolLocation['published']       = True
+   if   simToolRevision and not simToolName.endswith('.ipynb'):
+      simToolNotebook = os.path.basename(simToolName) + '.ipynb'
+      notebookPath = os.path.join(os.sep,'apps',simToolName,simToolRevision,'simtool',simToolNotebook)
+      if os.path.exists(notebookPath):
+         # look for installed or published revision in /apps/name/revision/simtool/
+         simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
+         simToolLocation['simToolName']     = os.path.basename(simToolName)
+         simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(simToolLocation['notebookPath'])))
+         # verify pubication status - sample published notebook reference to simtool
+         simToolNotebookMetaData = _getSimToolNotebookMetaData(simToolLocation['notebookPath'])
+         if simToolNotebookMetaData['name'] == simToolLocation['simToolName'] and \
+            simToolNotebookMetaData['revision'] == simToolLocation['simToolRevision'] and \
+            simToolNotebookMetaData['state'] == 'published':
+            simToolLocation['published'] = True
+         else:
+            simToolLocation['published'] = False
+#           print(simToolNotebookMetaData['name'],simToolLocation['simToolName'])
+#           print(simToolNotebookMetaData['revision'],simToolLocation['simToolRevision'])
+#           print(simToolNotebookMetaData['state'])
+      else:
+         notebookPath = os.path.join(simToolName,simToolRevision,'simtool',simToolNotebook)
+         if os.path.exists(notebookPath):
+            # look for notebook in name/revision/simtool/
+            simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
+            simToolLocation['simToolName']     = os.path.basename(simToolName)
+            simToolLocation['simToolRevision'] = simToolRevision
+            simToolLocation['published']       = False
+   elif not simToolName.endswith('.ipynb'):
+      # revision not specified
+      # look for latest published revision in /apps
+      simToolNotebook = os.path.basename(simToolName) + '.ipynb'
+      notebookPathPattern = os.path.join(os.sep,'apps',simToolName,'*','simtool',simToolNotebook)
+      newestRevision = 0
+      for notebookPath in glob.glob(notebookPathPattern):
+         revision = notebookPath.split(os.sep)[3]
+         if revision.startswith('r'):
+            simToolNotebookMetaData = _getSimToolNotebookMetaData(notebookPath)
+            if simToolNotebookMetaData['state'] == 'published':
+               revisionNumber = int(revision[1:])
+               if revisionNumber > newestRevision:
+                  newestRevision = revisionNumber
+                  simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
+                  simToolLocation['simToolName']     = os.path.basename(simToolName)
+                  simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(simToolLocation['notebookPath'])))
+                  simToolLocation['published']       = True
 
-       if simToolLocation['published'] is None:
-          notebookPath = os.path.join(simToolName,simToolNotebook)
-          if os.path.exists(notebookPath):
-             # look for notebook in name
-             simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
-             simToolLocation['simToolName']     = os.path.basename(simToolName)
-             simToolLocation['simToolRevision'] = None
-             simToolLocation['published']       = False
-          else:
-             notebookPath = os.path.join(simToolName,'simtool',simToolNotebook)
-             if os.path.exists(notebookPath):
-                # look for notebook in name
-                simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
-                simToolLocation['simToolName']     = os.path.basename(simToolName)
-                simToolLocation['simToolRevision'] = None
-                simToolLocation['published']       = False
-                notebookPath = simToolLocation['notebookPath'].split(os.sep)
-                notebookPath.pop(0)
-                if len(notebookPath) == 5:
-                   revision = notebookPath.pop(2)
-                   if os.sep.join(notebookPath) == \
-                      os.path.join('apps',simToolLocation['simToolName'],'simtool',simToolNotebook):
-                      simToolLocation['simToolRevision'] = revision
-                      # verify pubication status - sample published notebook reference to simtool
-                      simToolNotebookMetaData = _getSimToolNotebookMetaData(simToolLocation['notebookPath'])
-                      if simToolNotebookMetaData['name'] == simToolLocation['simToolName'] and \
-                         simToolNotebookMetaData['revision'] == simToolLocation['simToolRevision'] and \
-                         simToolNotebookMetaData['state'] == 'published':
-                         simToolLocation['published'] = True
-    elif os.path.isfile(simToolName):
-       # *.ipynb - must be a local (non-published) notebook
-       simToolLocation['notebookPath']    = os.path.realpath(simToolName)
-       simToolLocation['simToolName']     = os.path.splitext(os.path.basename(simToolName))[0]
-       simToolLocation['simToolRevision'] = None
-       simToolLocation['published']       = False
-    else:
-       if simToolRevision:
-          raise FileNotFoundError('Revision "%s" of simtool named "%s" not found' % (simToolRevision,simToolName))
-       else:
-          raise FileNotFoundError('No simtool named "%s, "' % (simToolName))
+      if simToolLocation['published'] is None:
+         notebookPath = os.path.join(simToolName,simToolNotebook)
+         if os.path.exists(notebookPath):
+            # look for notebook in name
+            simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
+            simToolLocation['simToolName']     = os.path.basename(simToolName)
+            simToolLocation['simToolRevision'] = None
+            simToolLocation['published']       = False
+         else:
+            notebookPath = os.path.join(simToolName,'simtool',simToolNotebook)
+            if os.path.exists(notebookPath):
+               # look for notebook in name
+               simToolLocation['notebookPath']    = os.path.realpath(notebookPath)
+               simToolLocation['simToolName']     = os.path.basename(simToolName)
+               simToolLocation['simToolRevision'] = None
+               simToolLocation['published']       = False
+               notebookPath = simToolLocation['notebookPath'].split(os.sep)
+               notebookPath.pop(0)
+               if len(notebookPath) == 5:
+                  revision = notebookPath.pop(2)
+                  if os.sep.join(notebookPath) == \
+                     os.path.join('apps',simToolLocation['simToolName'],'simtool',simToolNotebook):
+                     simToolLocation['simToolRevision'] = revision
+                     # verify pubication status - sample published notebook reference to simtool
+                     simToolNotebookMetaData = _getSimToolNotebookMetaData(simToolLocation['notebookPath'])
+                     if simToolNotebookMetaData['name'] == simToolLocation['simToolName'] and \
+                        simToolNotebookMetaData['revision'] == simToolLocation['simToolRevision'] and \
+                        simToolNotebookMetaData['state'] == 'published':
+                        simToolLocation['published'] = True
+   elif os.path.isfile(simToolName):
+      # *.ipynb - must be a local (non-published) notebook
+      simToolLocation['notebookPath']    = os.path.realpath(simToolName)
+      simToolLocation['simToolName']     = os.path.splitext(os.path.basename(simToolName))[0]
+      simToolLocation['simToolRevision'] = None
+      simToolLocation['published']       = False
+   else:
+      if simToolRevision:
+         raise FileNotFoundError('Revision "%s" of simtool named "%s" not found' % (simToolRevision,simToolName))
+      else:
+         raise FileNotFoundError('No simtool named "%s, "' % (simToolName))
 
-    return simToolLocation
+   return simToolLocation
 
 
 def findInstalledSimToolNotebooks(querySimToolName=None,
-                                  returnString=False):
+                                  returnString=True):
    """Find all the revisions of simToolName.
 
    Returns:
@@ -257,7 +260,7 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
             simToolNames.append(appsDir)
    simToolNames.sort()
 
-   reFiles = re.compile("r[0-9]+$")
+   reFiles = re.compile("^r[0-9]+$")
    for simToolName in simToolNames:
       simToolPath = os.path.join(os.sep,'apps',simToolName)
       try:
@@ -268,8 +271,12 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
          matchingFiles = filter(reFiles.search,dirFiles)
          simToolRevisions = []
          for matchingFile in matchingFiles:
-            revisionIndex = int(matchingFile[1:])
-            simToolRevisions.append(revisionIndex)
+            try:
+               revisionIndex = int(matchingFile[1:])
+            except:
+               pass
+            else:
+               simToolRevisions.append(revisionIndex)
          simToolRevisions.sort()
          simToolRevisions = [ 'r%d' % (revision) for revision in simToolRevisions ]
 
@@ -297,6 +304,78 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
       installedSimToolRevisions = installedSimToolRevisions.replace("\n\n", "\n  ").strip()
 
    return installedSimToolRevisions
+
+
+def searchForSimTool(simToolName,simToolRevision=None):
+   if simToolRevision is None:
+      foundIt = True
+      notebookPath = os.path.join('simtool',"%s.ipynb" % (simToolName))
+      if os.path.islink(notebookPath):
+         foundIt = False
+      else:
+         try:
+            simToolLocation = findSimToolNotebook(os.path.join('simtool',"%s.ipynb" % (simToolName)))
+         except:
+            foundIt = False
+         else:
+            if simToolLocation['notebookPath'] is None:
+               foundIt = False
+
+      if not foundIt:
+         foundIt = True
+         try:
+            simToolLocation = findSimToolNotebook(simToolName,'current')
+         except:
+            foundIt = False
+         else:
+            if simToolLocation['notebookPath'] is None:
+               foundIt = False
+
+      if not foundIt:
+         foundIt = True
+         try:
+            simToolLocation = findSimToolNotebook(simToolName,'dev')
+         except:
+            foundIt = False
+         else:
+            if simToolLocation['notebookPath'] is None:
+               foundIt = False
+
+      if foundIt:
+         if simToolLocation['notebookPath'].startswith(os.path.join(os.sep,'apps')):
+            simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(simToolLocation['notebookPath'])))
+   else:
+      foundIt = True
+      notebookPath = os.path.join(revision,'simtool',"%s.ipynb" % (simToolName))
+      if os.path.islink(notebookPath):
+         foundIt = False
+      else:
+         try:
+            simToolLocation = findSimToolNotebook(os.path.join(revision,'simtool',"%s.ipynb" % (simToolName)))
+         except:
+            foundIt = False
+         else:
+            if simToolLocation['notebookPath'] is None:
+               foundIt = False
+
+      if not foundIt:
+         foundIt = True
+         try:
+            simToolLocation = findSimToolNotebook(simToolName,simToolRevision)
+         except:
+            foundIt = False
+         else:
+            if simToolLocation['notebookPath'] is None:
+               foundIt = False
+
+   if not foundIt:
+      simToolLocation = {}
+      simToolLocation['notebookPath']    = None
+      simToolLocation['simToolName']     = None
+      simToolLocation['simToolRevision'] = None
+      simToolLocation['published']       = None
+
+   return simToolLocation
 
 
 def _find_simTool(simToolName,simToolRevision=None):
@@ -332,112 +411,114 @@ def _find_simTool(simToolName,simToolRevision=None):
 
 
 def getNotebookInputs(nb):
-    incell = None
-    for cell in nb.cells:
-        if cell['source'].startswith('%%yaml INPUTS'):
-            incell = cell['source']
-            break
-    if incell is None:
-        return None
-    # remove first line (cell magic)
-    incell = incell.split('\n', 1)[1]
-    input_dict = yaml.load(incell, Loader=yaml.FullLoader)
+   incell = None
+   for cell in nb.cells:
+      if cell['source'].startswith('%%yaml INPUTS'):
+         incell = cell['source']
+         break
+   if incell is None:
+      return None
+   # remove first line (cell magic)
+   incell = incell.split('\n', 1)[1]
+   input_dict = yaml.load(incell, Loader=yaml.FullLoader)
 
-    return parse(input_dict)
+   return parse(input_dict)
 
 
 def getSimToolInputs(simToolLocation):
-    nbPath = simToolLocation['notebookPath']
-    nb = load_notebook_node(nbPath)
+   nbPath = simToolLocation['notebookPath']
+   nb = load_notebook_node(nbPath)
 
-    return getNotebookInputs(nb)
+   return getNotebookInputs(nb)
 
 
 def _get_inputs_dict(inputs,
                      inputFileRunPrefix=None):
-    if type(inputs) == dict:
-        return inputs
-    inputsDict = {}
-    for i in inputs:
-        value = inputs[i].serialValue
+   if type(inputs) == dict:
+      return inputs
+   inputsDict = {}
+   for i in inputs:
+      value = inputs[i].serialValue
 
-        checkForFile = False
-        try:
-            if isinstance(value,basestring):
-                checkForFile = True
-        except NameError:
-            if isinstance(value,str):
-                checkForFile = True
+      checkForFile = False
+      try:
+         if isinstance(value,basestring):
+            checkForFile = True
+      except NameError:
+         if isinstance(value,str):
+            checkForFile = True
 
-        if checkForFile:
-            if value.startswith('file://'):
-                path = value[7:]
-                fileName = os.path.basename(path)
-                if inputFileRunPrefix:
-                    value = 'file://' + os.path.join(inputFileRunPrefix,fileName)
-                else:
-                    value = 'file://' + fileName
-        inputsDict[i] = value
-    return inputsDict
+      if checkForFile:
+         if value.startswith('file://'):
+            path = value[7:]
+            fileName = os.path.basename(path)
+            if inputFileRunPrefix:
+               value = 'file://' + os.path.join(inputFileRunPrefix,fileName)
+            else:
+               value = 'file://' + fileName
+      inputsDict[i] = value
+
+   return inputsDict
 
 
 def _get_inputs_cache_dict(inputs):
-    if type(inputs) == dict:
-        return inputs
-    inputsCacheDict = {}
-    for i in inputs:
-        value = inputs[i].serialValue
+   if type(inputs) == dict:
+      return inputs
+   inputsCacheDict = {}
+   for i in inputs:
+      value = inputs[i].serialValue
 
-        checkForFile = False
-        try:
-            if isinstance(value,basestring):
-                checkForFile = True
-        except NameError:
-            if isinstance(value,str):
-                checkForFile = True
+      checkForFile = False
+      try:
+         if isinstance(value,basestring):
+            checkForFile = True
+      except NameError:
+         if isinstance(value,str):
+            checkForFile = True
 
-        if checkForFile:
-            if value.startswith('file://'):
-                path = value[7:]
-                with open(path,'rb') as fp:
-                    value = fp.read()
-        inputsCacheDict[i] = value
-    return inputsCacheDict
+      if checkForFile:
+         if value.startswith('file://'):
+            path = value[7:]
+            with open(path,'rb') as fp:
+               value = fp.read()
+      inputsCacheDict[i] = value
+
+   return inputsCacheDict
 
 
 def _get_inputFiles(inputs):
-    if type(inputs) == dict:
-        return None
+   if type(inputs) == dict:
+      return None
 
-    inputFiles = []
-    for i in inputs:
-        try:
-            if inputs[i].file:
-                inputFiles.append(inputs[i].file)
-        except:
-            pass
-    return inputFiles
+   inputFiles = []
+   for i in inputs:
+      try:
+         if inputs[i].file:
+            inputFiles.append(inputs[i].file)
+      except:
+         pass
+   return inputFiles
 
 
 def getNotebookOutputs(nb):
-    incell = None
-    for cell in nb.cells:
-        if cell['source'].startswith('%%yaml OUTPUTS'):
-            incell = cell['source']
-            break
-    if incell is None:
-        return None
-    # remove first line (cell magic)
-    incell = incell.split('\n', 1)[1]
-    out_dict = yaml.load(incell, Loader=yaml.FullLoader)
+   incell = None
+   for cell in nb.cells:
+      if cell['source'].startswith('%%yaml OUTPUTS'):
+         incell = cell['source']
+         break
+   if incell is None:
+      return None
+   # remove first line (cell magic)
+   incell = incell.split('\n', 1)[1]
+   out_dict = yaml.load(incell, Loader=yaml.FullLoader)
 
-    return parse(out_dict)
+   return parse(out_dict)
 
 
 def getSimToolOutputs(simToolLocation):
-    nbPath = simToolLocation['notebookPath']
-    nb = load_notebook_node(nbPath)
+   nbPath = simToolLocation['notebookPath']
+   nb = load_notebook_node(nbPath)
 
-    return getNotebookOutputs(nb)
+   return getNotebookOutputs(nb)
 
 

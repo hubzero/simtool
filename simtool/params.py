@@ -481,7 +481,7 @@ class Number(Params):
                 pass
             elif type(newval) == float:
                 pass
-            elif type(newval) == numpy.float64:
+            elif type(newval) == np.float64:
                 newval = float(newval)
             else:
                 raise ValueError("%s is not a number (%s)" % (str(newval),type(newval)))
