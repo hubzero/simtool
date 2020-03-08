@@ -4,7 +4,12 @@ import copy
 import tempfile
 import stat
 from subprocess import call
-from hubzero.submit.SubmitCommand import SubmitCommand
+try:
+   from hubzero.submit.SubmitCommand import SubmitCommand
+except ImportError:
+   submitAvailable = False
+else:
+   submitAvailable = True
 
 import papermill as pm
 import yaml
@@ -391,23 +396,26 @@ class Run:
 
     def __new__(cls,simToolLocation,inputs,run_name=None,cache=True,venue=None):
         # cls.__init__(cls,desc)
-        if venue is None:
-            if simToolLocation['published'] and cache:
-                venue = 'trusted'
-            else:
-                venue = 'local'
+        if submitAvailable:
+           if venue is None:
+              if simToolLocation['published'] and cache:
+                 venue = 'trusted'
+              else:
+                 venue = 'local'
+        else:
+           venue = None
 
         if simToolLocation['simToolRevision'] is None:
-            cache = False
+           cache = False
 
         if   venue == 'local':
-            newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
+           newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
         elif venue == 'trusted' and cache: 
-            newclass = TrustedUserRun(simToolLocation,inputs,run_name,cache)
+           newclass = TrustedUserRun(simToolLocation,inputs,run_name,cache)
         elif venue is None:
-            newclass = LocalRun(simToolLocation,inputs,run_name,cache)
+           newclass = LocalRun(simToolLocation,inputs,run_name,cache)
         else:
-            raise ValueError('Bad venue/cache combination')
+           raise ValueError('Bad venue/cache combination')
 
         return newclass
 
