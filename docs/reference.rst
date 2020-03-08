@@ -6,7 +6,7 @@ Reference
 
 .. autoclass:: Run
 
-.. autofunction:: get_inputs
+.. autofunction:: getSimToolInputs
 
 .. autoclass:: Experiment
 
