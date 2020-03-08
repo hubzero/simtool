@@ -1,4 +1,4 @@
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 from .utils import getGetSimToolNameRevisionFromEnvironment, findInstalledSimToolNotebooks, searchForSimTool
 from .utils import parse, findSimToolNotebook, getSimToolInputs, getSimToolOutputs
