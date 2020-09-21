@@ -307,19 +307,56 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
 
 
 def searchForSimTool(simToolName,simToolRevision=None):
+   foundIt = True
    if simToolRevision is None:
-      foundIt = True
       notebookPath = os.path.join('simtool',"%s.ipynb" % (simToolName))
-      if os.path.islink(notebookPath):
-         foundIt = False
-      else:
-         try:
-            simToolLocation = findSimToolNotebook(os.path.join('simtool',"%s.ipynb" % (simToolName)))
-         except:
+      if not os.path.islink(notebookPath):
+         notebookPath = os.path.join('..','simtool',"%s.ipynb" % (simToolName))
+         if not os.path.islink(notebookPath):
             foundIt = False
-         else:
-            if simToolLocation['notebookPath'] is None:
+
+      if foundIt:
+#        verify link to installed (/apps) version
+         if os.path.isfile(notebookPath):
+            notebookPath = os.path.realpath(os.path.abspath(notebookPath))
+            installedNotebookPattern = os.path.join(os.sep,'apps',simToolName,'(r[0-9]+)','simtool',"%s.ipynb" % (simToolName))
+            reInstalledNotebookPattern = re.compile("^%s$" % (installedNotebookPattern))
+            match = reInstalledNotebookPattern.match(notebookPath)
+            if match:
+               simToolLocation = {}
+               simToolLocation['notebookPath']    = notebookPath
+               simToolLocation['simToolName']     = simToolName
+               simToolLocation['simToolRevision'] = match.group(1)
+               simToolNotebookMetaData = _getSimToolNotebookMetaData(simToolLocation['notebookPath'])
+               if simToolNotebookMetaData['name'] == simToolLocation['simToolName'] and \
+                  simToolNotebookMetaData['revision'] == simToolLocation['simToolRevision'] and \
+                  simToolNotebookMetaData['state'] == 'published':
+                  simToolLocation['published'] = True
+               else:
+                  simToolLocation['published'] = False
+            else:
                foundIt = False
+         else:
+#           broken link
+            foundIt = False
+
+      if not foundIt:
+# Not an installed SimTool
+         foundIt = True
+
+         notebookPath = os.path.join('simtool',"%s.ipynb" % (simToolName))
+         if not os.path.isfile(notebookPath):
+            notebookPath = os.path.join('..','simtool',"%s.ipynb" % (simToolName))
+            if not os.path.isfile(notebookPath):
+               foundIt = False
+
+         if foundIt:
+            notebookPath = os.path.realpath(os.path.abspath(notebookPath))
+            simToolLocation = {}
+            simToolLocation['notebookPath']    = notebookPath
+            simToolLocation['simToolName']     = simToolName
+            simToolLocation['simToolRevision'] = None
+            simToolLocation['published']       = False
 
       if not foundIt:
          foundIt = True
@@ -328,8 +365,11 @@ def searchForSimTool(simToolName,simToolRevision=None):
          except:
             foundIt = False
          else:
-            if simToolLocation['notebookPath'] is None:
+            notebookPath = simToolLocation['notebookPath']
+            if notebookPath is None:
                foundIt = False
+            else:
+               simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(notebookPath)))
 
       if not foundIt:
          foundIt = True
@@ -338,35 +378,19 @@ def searchForSimTool(simToolName,simToolRevision=None):
          except:
             foundIt = False
          else:
-            if simToolLocation['notebookPath'] is None:
+            notebookPath = simToolLocation['notebookPath']
+            if notebookPath is None:
                foundIt = False
-
-      if foundIt:
-         if simToolLocation['notebookPath'].startswith(os.path.join(os.sep,'apps')):
-            simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(simToolLocation['notebookPath'])))
+            else:
+               simToolLocation['simToolRevision'] = os.path.basename(os.path.dirname(os.path.dirname(notebookPath)))
    else:
-      foundIt = True
-      notebookPath = os.path.join(revision,'simtool',"%s.ipynb" % (simToolName))
-      if os.path.islink(notebookPath):
+      try:
+         simToolLocation = findSimToolNotebook(simToolName,simToolRevision)
+      except:
          foundIt = False
       else:
-         try:
-            simToolLocation = findSimToolNotebook(os.path.join(revision,'simtool',"%s.ipynb" % (simToolName)))
-         except:
+         if simToolLocation['notebookPath'] is None:
             foundIt = False
-         else:
-            if simToolLocation['notebookPath'] is None:
-               foundIt = False
-
-      if not foundIt:
-         foundIt = True
-         try:
-            simToolLocation = findSimToolNotebook(simToolName,simToolRevision)
-         except:
-            foundIt = False
-         else:
-            if simToolLocation['notebookPath'] is None:
-               foundIt = False
 
    if not foundIt:
       simToolLocation = {}

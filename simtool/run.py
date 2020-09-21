@@ -4,6 +4,7 @@ import copy
 import tempfile
 import stat
 from subprocess import call
+import traceback
 try:
    from hubzero.submit.SubmitCommand import SubmitCommand
 except ImportError:
@@ -395,28 +396,25 @@ class Run:
     inputFileRunPrefix = '.notebookInputFiles'
 
     def __new__(cls,simToolLocation,inputs,run_name=None,cache=True,venue=None):
-        # cls.__init__(cls,desc)
-        if submitAvailable:
-           if venue is None:
-              if simToolLocation['published'] and cache:
-                 venue = 'trusted'
-              else:
-                 venue = 'local'
-        else:
-           venue = None
+       # cls.__init__(cls,desc)
+       if venue is None and submitAvailable:
+          if simToolLocation['published'] and cache:
+             venue = 'trusted'
+          else:
+             venue = 'local'
 
-        if simToolLocation['simToolRevision'] is None:
-           cache = False
+       if simToolLocation['simToolRevision'] is None:
+          cache = False
 
-        if   venue == 'local':
-           newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
-        elif venue == 'trusted' and cache: 
-           newclass = TrustedUserRun(simToolLocation,inputs,run_name,cache)
-        elif venue is None:
-           newclass = LocalRun(simToolLocation,inputs,run_name,cache)
-        else:
-           raise ValueError('Bad venue/cache combination')
+       if   venue == 'local':
+          newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
+       elif venue == 'trusted' and cache: 
+          newclass = TrustedUserRun(simToolLocation,inputs,run_name,cache)
+       elif venue is None:
+          newclass = LocalRun(simToolLocation,inputs,run_name,cache)
+       else:
+          raise ValueError('Bad venue/cache combination')
 
-        return newclass
+       return newclass
 
 
