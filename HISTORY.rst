@@ -21,3 +21,9 @@ History
 ------------------
 
 * PyPI release with updated documentation.
+
+0.2.3 (2020-09-21)
+------------------
+
+* Improved search function to locate simTool notebook
+
