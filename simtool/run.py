@@ -1,6 +1,8 @@
 import os
 import uuid
 import copy
+import json
+import shutil
 import tempfile
 import stat
 from subprocess import call
@@ -35,7 +37,7 @@ class LocalRun:
 
         if cache:
             hashableInputs = _get_inputs_cache_dict(self.inputs)
-            self.dstore = Run.ds_handler(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs,'user')
+            self.dstore = Run.ds_handler(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs)
             del hashableInputs
 
         if run_name is None:
@@ -140,7 +142,7 @@ class SubmitLocalRun:
 
         if cache:
             hashableInputs = _get_inputs_cache_dict(self.inputs)
-            self.dstore = Run.ds_handler(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs,'user')
+            self.dstore = Run.ds_handler(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs)
             del hashableInputs
 
         if run_name is None:
@@ -200,7 +202,9 @@ class SubmitLocalRun:
             submitCommand = SubmitCommand()
             submitCommand.setLocal()
             submitCommand.setCommand("papermill")
-            submitCommand.setCommandArguments(["-f","inputs.yaml",simToolLocation['notebookPath'],nbName])
+            submitCommand.setCommandArguments(["-f","inputs.yaml",
+                                               simToolLocation['notebookPath'],
+                                               nbName])
             submitCommand.show()
             try:
                result = submitCommand.submit()
@@ -252,8 +256,148 @@ class SubmitLocalRun:
         return self.db.read(name,display,raw)
 
 
+class SubmitRemoteRun:
+   """
+   Run a notebook using submit --venue VENUE -w TIME -n CORES.
+   """
 
-class TrustedUserRun:
+   def __init__(self,simToolLocation,inputs,run_name,remoteAttributes,cache):
+      nbName = simToolLocation['simToolName'] +'.ipynb'
+      self.inputs = copy.deepcopy(inputs)
+      self.input_dict = _get_inputs_dict(self.inputs,inputFileRunPrefix=Run.inputFileRunPrefix)
+      self.inputFiles = _get_inputFiles(self.inputs)
+      self.outputs = copy.deepcopy(getSimToolOutputs(simToolLocation))
+
+      if cache:
+         hashableInputs = _get_inputs_cache_dict(self.inputs)
+         self.dstore = Run.ds_handler(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs)
+         del hashableInputs
+
+      if run_name is None:
+         run_name = str(uuid.uuid4()).replace('-','')
+      self.run_name = run_name
+      self.outdir = os.path.join(get_experiment(),run_name)
+      os.makedirs(self.outdir)
+      self.outname = os.path.join(self.outdir,nbName)
+      self.remoteSimTool = os.path.join(self.outdir,'.simtool')
+      os.makedirs(self.remoteSimTool)
+
+      print("runname   = %s" % (self.run_name))
+      print("outdir    = %s" % (self.outdir))
+      self.cached = False
+      if cache:
+         self.cached = self.dstore.read_cache(self.outdir)
+      print("cached    = %s" % (self.cached))
+      print("published = %s" % (simToolLocation['published']))
+
+      if not self.cached:
+         # Prepare output directory by copying any files that the notebook
+         # depends on.
+         sdir = os.path.dirname(simToolLocation['notebookPath'])
+         if simToolLocation['published']:
+            # We want to allow simtools to be more than just the notebook,
+            # so we recursively copy the notebook directory.
+            call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+         else:
+            os.symlink(os.path.abspath(os.path.join(sdir,nbName)),os.path.join(self.remoteSimTool,nbName))
+            files = _get_extra_files(simToolLocation['notebookPath'])
+            # print("EXTRA FILES:",files)
+            if   files == "*":
+               call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+            elif files is not None:
+               for f in files:
+                  os.symlink(os.path.abspath(os.path.join(sdir,f)),os.path.join(self.remoteSimTool,f))
+
+         if Run.inputFileRunPrefix:
+            inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
+            os.makedirs(inputFileRunPath)
+            for inputFile in self.inputFiles:
+               call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+         else:
+            for inputFile in self.inputFiles:
+               call("cp -p %s %s" % (inputFile,self.outdir),shell=True)
+
+         cwd = os.getcwd()
+         os.chdir(self.outdir)
+
+         with open('inputs.yaml','w') as fp:
+            yaml.dump(self.input_dict,fp)
+
+         prerunFiles = os.listdir(os.getcwd())
+         prerunFiles.append(nbName)
+
+         # FIXME: run in background. wait or check status.
+         submitCommand = SubmitCommand()
+         try:
+            submitCommand.setVenue(remoteAttributes['venue'])
+         except:
+            pass
+         try:
+            submitCommand.setWallTime(remoteAttributes['wallTime'])
+         except:
+            pass
+         try:
+            submitCommand.setNcores(remoteAttributes['nCores'])
+         except:
+            pass
+         submitCommand.setInputFiles([".simtool",Run.inputFileRunPrefix])
+         submitCommand.setCommand(remoteAttributes['command'])
+         submitCommand.setCommandArguments(["-s",simToolLocation['simToolName'],
+                                            "-i","inputs.yaml"])
+         submitCommand.show()
+         try:
+            result = submitCommand.submit()
+         except:
+            exitCode = 1
+            print(traceback.format_exc())
+         else:
+            exitCode = result['exitCode']
+            if exitCode != 0:
+               print("SimTool execution failed")
+
+         shutil.rmtree(self.remoteSimTool,True)
+
+         os.chdir(cwd)
+
+         self.db = DB(self.outname,dir=self.outdir)
+         self.savedOutputs     = self.db.getSavedOutputs()
+         self.savedOutputFiles = self.db.getSavedOutputFiles()
+#        if len(self.savedOutputFiles) > 0:
+#           print("Saved output files: %s" % (self.savedOutputFiles))
+
+         requiredOutputs  = set(self.outputs.keys())
+         deliveredOutputs = set(self.savedOutputs)
+         missingOutputs = requiredOutputs - deliveredOutputs
+         extraOutputs   = deliveredOutputs - requiredOutputs
+         if 'simToolSaveErrorOccurred' in extraOutputs:
+            extraOutputs.remove('simToolSaveErrorOccurred')
+         if 'simToolAllOutputsSaved' in extraOutputs:
+            extraOutputs.remove('simToolAllOutputsSaved')
+         if len(missingOutputs) > 0:
+            print("The following outputs are missing: %s" % (list(missingOutputs)))
+         if len(extraOutputs) > 0:
+            print("The following additional outputs were returned: %s" % (list(extraOutputs)))
+
+         simToolSaveErrorOccurred = self.db.getSimToolSaveErrorOccurred()
+#        print("simToolSaveErrorOccurred = %d" % (simToolSaveErrorOccurred))
+         simToolAllOutputsSaved = self.db.getSimToolAllOutputsSaved()
+#        print("simToolAllOutputsSaved = %d" % (simToolAllOutputsSaved))
+
+         if cache:
+            self.dstore.write_cache(self.outdir,prerunFiles,self.savedOutputFiles)
+      else:
+         self.db = DB(self.outname,dir=self.outdir)
+
+
+   def getResultSummary(self):
+      return self.db.nb.scrap_dataframe
+
+
+   def read(self, name, display=False, raw=False):
+      return self.db.read(name,display,raw)
+
+
+class TrustedUserLocalRun:
     """
     Prepare and run of a notebook as a trusted user.
     """
@@ -291,8 +435,11 @@ class TrustedUserRun:
 
             submitCommand = SubmitCommand()
             submitCommand.setLocal()
-            submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetSimToolResult.sh'))
-            submitCommand.setCommandArguments([simToolLocation['simToolName'],simToolLocation['simToolRevision'],inputsPath,self.outdir])
+            submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
+            submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                               simToolLocation['simToolRevision'],
+                                               inputsPath,
+                                               self.outdir])
             submitCommand.show()
             try:
                 result = submitCommand.submit()
@@ -309,7 +456,9 @@ class TrustedUserRun:
                 submitCommand = SubmitCommand()
                 submitCommand.setLocal()
                 submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperRunSimTool.sh'))
-                submitCommand.setCommandArguments([simToolLocation['simToolName'],simToolLocation['simToolRevision'],inputsPath])
+                submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                                   simToolLocation['simToolRevision'],
+                                                   inputsPath])
                 submitCommand.show()
                 try:
                     result = submitCommand.submit()
@@ -326,8 +475,143 @@ class TrustedUserRun:
 #                   Retrieve result from cache
                     submitCommand = SubmitCommand()
                     submitCommand.setLocal()
-                    submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetSimToolResult.sh'))
-                    submitCommand.setCommandArguments([simToolLocation['simToolName'],simToolLocation['simToolRevision'],inputsPath,self.outdir])
+                    submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
+                    submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                                       simToolLocation['simToolRevision'],
+                                                       inputsPath,
+                                                       self.outdir])
+                    submitCommand.show()
+                    try:
+                        result = submitCommand.submit()
+                    except:
+                        exitCode = 1
+                        print(traceback.format_exc())
+                    else:
+                        exitCode = result['exitCode']
+                        if exitCode != 0:
+                            print("Retrieval of generated cached result failed")
+                else:
+#                   Retrieve error result from ionhelper delivery
+                    submitCommand = SubmitCommand()
+                    submitCommand.setLocal()
+                    submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperLoadSimToolResult.sh'))
+                    submitCommand.setCommandArguments([self.outdir])
+                    submitCommand.show()
+                    try:
+                        result = submitCommand.submit()
+                    except:
+                        exitCode = 1
+                        print(traceback.format_exc())
+                    else:
+                        exitCode = result['exitCode']
+                        if exitCode != 0:
+                            print("Retrieval of failed execution result failed")
+
+            self.db = DB(self.outname,dir=self.outdir)
+        else:
+            print("The simtool %s/%s is not published" % (simToolLocation['simToolName'],simToolLocation['simToolRevision']))
+
+
+    def getResultSummary(self):
+        return self.db.nb.scrap_dataframe
+
+
+    def read(self, name, display=False, raw=False):
+        return self.db.read(name,display,raw)
+
+
+class TrustedUserRemoteRun:
+    """
+    Prepare and run of a notebook as a trusted user.
+    """
+
+    def __init__(self,simToolLocation,inputs,run_name,remoteAttributes,cache):
+        if simToolLocation['published']:
+# Only published simTool can be run with trusted user
+            nbName = simToolLocation['simToolName'] +'.ipynb'
+            self.inputs = copy.deepcopy(inputs)
+            self.input_dict = _get_inputs_dict(self.inputs,inputFileRunPrefix=Run.inputFileRunPrefix)
+            self.inputFiles = _get_inputFiles(self.inputs)
+            self.outputs = copy.deepcopy(getSimToolOutputs(simToolLocation))
+
+# Create landing area for results
+            if run_name is None:
+                run_name = str(uuid.uuid4()).replace('-','')
+            self.run_name = run_name
+            self.outdir = os.path.join(get_experiment(),run_name)
+            os.makedirs(self.outdir)
+            self.outname = os.path.join(self.outdir,nbName)
+            self.remoteSimTool = os.path.join(self.outdir,'.simtool')
+            os.makedirs(self.remoteSimTool)
+ 
+            sdir = os.path.dirname(simToolLocation['notebookPath'])
+            # We want to allow simtools to be more than just the notebook,
+            # so we recursively copy the notebook directory.
+            call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+
+            inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
+            os.makedirs(inputFileRunPath)
+            for inputFile in self.inputFiles:
+                call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+
+# Generate inputs file for cache comparison and/or job input
+            inputsPath = os.path.join(self.outdir,'inputs.yaml')
+            with open(inputsPath,'w') as fp:
+                yaml.dump(self.input_dict,fp)
+
+            submitCommand = SubmitCommand()
+            submitCommand.setLocal()
+            submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
+            submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                               simToolLocation['simToolRevision'],
+                                               inputsPath,
+                                               self.outdir])
+            submitCommand.show()
+            try:
+                result = submitCommand.submit()
+            except:
+                exitCode = 1
+                print(traceback.format_exc())
+            else:
+                exitCode = result['exitCode']
+                if exitCode == 0:
+                   print("Found cached result")
+
+            self.cached = exitCode == 0
+            if not self.cached:
+# pass along remote submit command arguments: venue, walltime, cores, command
+                argumentsPath = os.path.join(self.outdir,'remoteArguments.json')
+                with open(argumentsPath,'w') as fp:
+                    json.dump(remoteAttributes,fp)
+
+                submitCommand = SubmitCommand()
+                submitCommand.setLocal()
+                submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperRunSimTool.sh'))
+                submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                                   simToolLocation['simToolRevision'],
+                                                   inputsPath])
+                submitCommand.show()
+                try:
+                    result = submitCommand.submit()
+                except:
+                    exitCode = 1
+                    print(traceback.format_exc())
+                else:
+                    exitCode = result['exitCode']
+                    if exitCode != 0:
+                        print("SimTool execution failed")
+                self.cached = exitCode == 0
+                shutil.rmtree(self.remoteSimTool,True)
+
+                if self.cached:
+#                   Retrieve result from cache
+                    submitCommand = SubmitCommand()
+                    submitCommand.setLocal()
+                    submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
+                    submitCommand.setCommandArguments([simToolLocation['simToolName'],
+                                                       simToolLocation['simToolRevision'],
+                                                       inputsPath,
+                                                       self.outdir])
                     submitCommand.show()
                     try:
                         result = submitCommand.submit()
@@ -395,11 +679,16 @@ class Run:
     ds_handler         = FileDataStore  # local files or NFS.  should be config option
     inputFileRunPrefix = '.notebookInputFiles'
 
-    def __new__(cls,simToolLocation,inputs,run_name=None,cache=True,venue=None):
+    def __new__(cls,simToolLocation,inputs,run_name=None,remoteAttributes=None,cache=True,venue=None):
        # cls.__init__(cls,desc)
        if venue is None and submitAvailable:
-          if simToolLocation['published'] and cache:
-             venue = 'trusted'
+          if   remoteAttributes:
+             if simToolLocation['published'] and cache:
+                venue = 'trustedRemote'
+             else:
+                venue = 'remote'
+          elif simToolLocation['published'] and cache:
+             venue = 'trustedLocal'
           else:
              venue = 'local'
 
@@ -408,8 +697,12 @@ class Run:
 
        if   venue == 'local':
           newclass = SubmitLocalRun(simToolLocation,inputs,run_name,cache)
-       elif venue == 'trusted' and cache: 
-          newclass = TrustedUserRun(simToolLocation,inputs,run_name,cache)
+       elif venue == 'remote':
+          newclass = SubmitRemoteRun(simToolLocation,inputs,run_name,remoteAttributes,cache)
+       elif venue == 'trustedLocal': 
+          newclass = TrustedUserLocalRun(simToolLocation,inputs,run_name,cache)
+       elif venue == 'trustedRemote': 
+          newclass = TrustedUserRemoteRun(simToolLocation,inputs,run_name,remoteAttributes,cache)
        elif venue is None:
           newclass = LocalRun(simToolLocation,inputs,run_name,cache)
        else:
