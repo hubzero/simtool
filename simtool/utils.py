@@ -436,14 +436,23 @@ def _find_simTool(simToolName,simToolRevision=None):
 
 def getNotebookInputs(nb):
    incell = None
+# ignore lines up to and including %%yaml (cell magic)
+   yamlLineNumber = -1
    for cell in nb.cells:
-      if cell['source'].startswith('%%yaml INPUTS'):
-         incell = cell['source']
+      cellSourceLines = cell['source'].split('\n')
+      lineNumber = 0
+      for cellSourceLine in cellSourceLines:
+         if cellSourceLine.startswith('%%yaml INPUTS'):
+            yamlLineNumber = lineNumber
+            break
+         lineNumber += 1
+
+      if yamlLineNumber >= 0:
+         incell = '\n'.join(cellSourceLines[yamlLineNumber+1:])
          break
+      
    if incell is None:
       return None
-   # remove first line (cell magic)
-   incell = incell.split('\n', 1)[1]
    input_dict = yaml.load(incell, Loader=yaml.FullLoader)
 
    return parse(input_dict)
@@ -526,14 +535,23 @@ def _get_inputFiles(inputs):
 
 def getNotebookOutputs(nb):
    incell = None
+# ignore lines up to and including %%yaml (cell magic)
+   yamlLineNumber = -1
    for cell in nb.cells:
-      if cell['source'].startswith('%%yaml OUTPUTS'):
-         incell = cell['source']
+      cellSourceLines = cell['source'].split('\n')
+      lineNumber = 0
+      for cellSourceLine in cellSourceLines:
+         if cellSourceLine.startswith('%%yaml OUTPUTS'):
+            yamlLineNumber = lineNumber
+            break
+         lineNumber += 1
+
+      if yamlLineNumber >= 0:
+         incell = '\n'.join(cellSourceLines[yamlLineNumber+1:])
          break
+      
    if incell is None:
       return None
-   # remove first line (cell magic)
-   incell = incell.split('\n', 1)[1]
    out_dict = yaml.load(incell, Loader=yaml.FullLoader)
 
    return parse(out_dict)
