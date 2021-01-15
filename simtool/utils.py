@@ -434,28 +434,37 @@ def _find_simTool(simToolName,simToolRevision=None):
             raise FileNotFoundError('No simtool named "%s, "' % (simToolName))
 
 
-def getNotebookInputs(nb):
-   incell = None
+def _getNotebookeCellYAMLcontent(nb,
+                                 yamlTag):
+   yamlDict = None
 # ignore lines up to and including %%yaml (cell magic)
+   yamlContent = None
    yamlLineNumber = -1
    for cell in nb.cells:
       cellSourceLines = cell['source'].split('\n')
       lineNumber = 0
       for cellSourceLine in cellSourceLines:
-         if cellSourceLine.startswith('%%yaml INPUTS'):
+         if cellSourceLine.startswith("%%yaml " % (yamlTag)):
             yamlLineNumber = lineNumber
             break
          lineNumber += 1
 
       if yamlLineNumber >= 0:
-         incell = '\n'.join(cellSourceLines[yamlLineNumber+1:])
+         yamlContent = '\n'.join(cellSourceLines[yamlLineNumber+1:])
          break
       
-   if incell is None:
-      return None
-   input_dict = yaml.load(incell, Loader=yaml.FullLoader)
+   if yamlContent:
+      yamlDict = yaml.load(yamlContent, Loader=yaml.FullLoader)
 
-   return parse(input_dict)
+   return yamlDict
+
+
+def getNotebookInputs(nb):
+   yamlDict = _getNotebookeCellYAMLcontent(nb,"INPUTS")
+   if yamlDict:
+      return parse(yamlDict)
+   else:
+      return None
 
 
 def getSimToolInputs(simToolLocation):
@@ -534,27 +543,11 @@ def _get_inputFiles(inputs):
 
 
 def getNotebookOutputs(nb):
-   incell = None
-# ignore lines up to and including %%yaml (cell magic)
-   yamlLineNumber = -1
-   for cell in nb.cells:
-      cellSourceLines = cell['source'].split('\n')
-      lineNumber = 0
-      for cellSourceLine in cellSourceLines:
-         if cellSourceLine.startswith('%%yaml OUTPUTS'):
-            yamlLineNumber = lineNumber
-            break
-         lineNumber += 1
-
-      if yamlLineNumber >= 0:
-         incell = '\n'.join(cellSourceLines[yamlLineNumber+1:])
-         break
-      
-   if incell is None:
+   yamlDict = _getNotebookeCellYAMLcontent(nb,"OUTPUTS")
+   if yamlDict:
+      return parse(yamlDict)
+   else:
       return None
-   out_dict = yaml.load(incell, Loader=yaml.FullLoader)
-
-   return parse(out_dict)
 
 
 def getSimToolOutputs(simToolLocation):
