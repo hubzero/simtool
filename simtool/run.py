@@ -56,20 +56,19 @@ class LocalRun:
       print("published = %s" % (simToolLocation['published']))
 
       if not self.cached:
-         # Prepare output directory by copying any files that the notebook
-         # depends on.
-         sdir = os.path.dirname(simToolLocation['notebookPath'])
+         # Prepare output directory by copying any files that the notebook depends on.
+         sdir = os.path.abspath(os.path.dirname(simToolLocation['notebookPath']))
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            call("cp -sRf %s/* %s" % (sdir,self.outdir),shell=True)
+            shutil.copytree(sdir,self.outdir,copy_function=os.syslink)
             # except the notebook itself
             os.remove(os.path.join(self.outdir,nbName))
          else:
             files = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",files)
             if   files == "*":
-               call("cp -sRf %s/* %s" % (sdir,self.outdir),shell=True)
+               shutil.copytree(sdir,self.outdir,copy_function=os.syslink)
                os.remove(os.path.join(self.outdir,nbName))
             elif files is not None:
                for f in files:
@@ -78,7 +77,7 @@ class LocalRun:
          inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
          os.makedirs(inputFileRunPath)
          for inputFile in self.inputFiles:
-            call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+            shutil.copy2(inputFile,inputFileRunPath)
 
          prerunFiles = os.listdir(os.getcwd())
          prerunFiles.append(nbName)
@@ -157,20 +156,19 @@ class SubmitLocalRun:
       print("published = %s" % (simToolLocation['published']))
 
       if not self.cached:
-         # Prepare output directory by copying any files that the notebook
-         # depends on.
-         sdir = os.path.dirname(simToolLocation['notebookPath'])
+         # Prepare output directory by copying any files that the notebook depends on.
+         sdir = os.path.abspath(os.path.dirname(simToolLocation['notebookPath']))
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            call("cp -sRf %s/* %s" % (sdir,self.outdir),shell=True)
+            shutil.copytree(sdir,self.outdir,copy_function=os.syslink)
             # except the notebook itself
             os.remove(os.path.join(self.outdir,nbName))
          else:
             files = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",files)
             if   files == "*":
-               call("cp -sRf %s/* %s" % (sdir,self.outdir),shell=True)
+               shutil.copytree(sdir,self.outdir,copy_function=os.syslink)
                os.remove(os.path.join(self.outdir,nbName))
             elif files is not None:
                for f in files:
@@ -179,7 +177,7 @@ class SubmitLocalRun:
          inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
          os.makedirs(inputFileRunPath)
          for inputFile in self.inputFiles:
-            call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+            shutil.copy2(inputFile,inputFileRunPath)
 
          cwd = os.getcwd()
          os.chdir(self.outdir)
@@ -283,19 +281,18 @@ class SubmitRemoteRun:
       print("published = %s" % (simToolLocation['published']))
 
       if not self.cached:
-         # Prepare output directory by copying any files that the notebook
-         # depends on.
-         sdir = os.path.dirname(simToolLocation['notebookPath'])
+         # Prepare output directory by copying any files that the notebook depends on.
+         sdir = os.path.abspath(os.path.dirname(simToolLocation['notebookPath']))
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+            shutil.copytree(sdir,self.remoteSimTool,copy_function=os.syslink)
          else:
             os.symlink(os.path.abspath(os.path.join(sdir,nbName)),os.path.join(self.remoteSimTool,nbName))
             files = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",files)
             if   files == "*":
-               call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+               shutil.copytree(sdir,self.remoteSimTool,copy_function=os.syslink)
             elif files is not None:
                for f in files:
                   os.symlink(os.path.abspath(os.path.join(sdir,f)),os.path.join(self.remoteSimTool,f))
@@ -303,7 +300,7 @@ class SubmitRemoteRun:
          inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
          os.makedirs(inputFileRunPath)
          for inputFile in self.inputFiles:
-            call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+            shutil.copy2(inputFile,inputFileRunPath)
 
          cwd = os.getcwd()
          os.chdir(self.outdir)
@@ -411,7 +408,7 @@ class TrustedUserLocalRun:
          inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
          os.makedirs(inputFileRunPath)
          for inputFile in self.inputFiles:
-            call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+            shutil.copy2(inputFile,inputFileRunPath)
 
 # Generate inputs file for cache comparison and/or job input
          inputsPath = os.path.join(self.outdir,'inputs.yaml')
@@ -529,15 +526,15 @@ class TrustedUserRemoteRun:
          self.remoteSimTool = os.path.join(self.outdir,Run.simToolRunPrefix)
          os.makedirs(self.remoteSimTool)
  
-         sdir = os.path.dirname(simToolLocation['notebookPath'])
+         sdir = os.path.abspath(os.path.dirname(simToolLocation['notebookPath']))
          # We want to allow simtools to be more than just the notebook,
          # so we recursively copy the notebook directory.
-         call("cp -sRf %s/* %s" % (sdir,self.remoteSimTool),shell=True)
+         shutil.copytree(sdir,self.remoteSimTool,copy_function=os.syslink)
 
          inputFileRunPath = os.path.join(self.outdir,Run.inputFileRunPrefix)
          os.makedirs(inputFileRunPath)
          for inputFile in self.inputFiles:
-            call("cp -p %s %s" % (inputFile,inputFileRunPath),shell=True)
+            shutil.copy2(inputFile,inputFileRunPath)
 
 # Generate inputs file for cache comparison and/or job input
          inputsPath = os.path.join(self.outdir,'inputs.yaml')
