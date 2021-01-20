@@ -444,7 +444,7 @@ def _getNotebookeCellYAMLcontent(nb,
       cellSourceLines = cell['source'].split('\n')
       lineNumber = 0
       for cellSourceLine in cellSourceLines:
-         if cellSourceLine.startswith("%%yaml " % (yamlTag)):
+         if cellSourceLine.startswith("%%%%yaml %s" % (yamlTag)):
             yamlLineNumber = lineNumber
             break
          lineNumber += 1
