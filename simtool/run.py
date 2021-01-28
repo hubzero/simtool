@@ -73,6 +73,17 @@ class RunBase:
       self.savedOutputs = None
 
 
+   @staticmethod
+   def __copySimToolTree(sdir,ddir):
+      simToolFiles = os.listdir(sdir)
+      for simToolFile in simToolFiles:
+         simToolPath = os.path.join(sdir,simToolFile)
+         if os.path.isdir(simToolPath):
+            shutil.copytree(simToolPath,ddir,copy_function=os.symlink)
+         else:
+            os.symlink(simToolPath,os.path.join(ddir,simToolFile))
+
+
    def setupInputFiles(self,simToolLocation,
                             doSimToolFiles=True,keepSimToolNotebook=False,remote=False,
                             doUserInputFiles=True,
@@ -87,22 +98,22 @@ class RunBase:
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            shutil.copytree(sdir,ddir,copy_function=os.syslink)
+            self.__copySimToolTree(sdir,ddir)
             # except the notebook itself
             if not keepSimToolNotebook:
                os.remove(os.path.join(ddir,self.nbName))
          else:
             if keepSimToolNotebook and remote:
                os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
-            files = _get_extra_files(simToolLocation['notebookPath'])
-            # print("EXTRA FILES:",files)
-            if   files == "*":
-               shutil.copytree(sdir,ddir,copy_function=os.syslink)
+            extraFiles = _get_extra_files(simToolLocation['notebookPath'])
+            # print("EXTRA FILES:",extraFiles)
+            if   extraFiles == "*":
+               self.__copySimToolTree(sdir,ddir)
                if not keepSimToolNotebook:
                   os.remove(os.path.join(ddir,self.nbName))
-            elif files is not None:
-               for f in files:
-                  os.symlink(os.path.abspath(os.path.join(sdir,f)),os.path.join(ddir,f))
+            elif extraFiles is not None:
+               for extraFile in extraFiles:
+                  os.symlink(os.path.abspath(os.path.join(sdir,extraFile)),os.path.join(ddir,extraFile))
 
       if doUserInputFiles:
          inputFileRunPath = os.path.join(self.outdir,RunBase.INPUTFILERUNPREFIX)
@@ -462,14 +473,23 @@ class Run:
            A Run object.
        """
 
-   def __new__(cls,simToolLocation,inputs,
-                   runName=None,remoteAttributes=None,cache=True,venue=None):
+   def __new__(cls,simToolLocation,inputs,runName=None,remoteAttributes=None,cache=True,venue=None):
+      remoteRunAttributes = copy.deepcopy(remoteAttributes)
       if venue is None and submitAvailable:
-         if   remoteAttributes:
+         if   remoteRunAttributes:
             if simToolLocation['published'] and cache:
                venue = 'trustedRemote'
             else:
                venue = 'remote'
+            if not 'command' in remoteRunAttributes:
+               try:
+                  nCores = remoteRunAttributes['nCores']
+               except:
+                  nCores = 1
+               if nCores == 1:
+                  remoteRunAttributes['command'] = "%s_simtool_serial" % (simToolLocation['simToolName'])
+               else:
+                  remoteRunAttributes['command'] = "%s_simtool_mpi" % (simToolLocation['simToolName'])
          elif simToolLocation['published'] and cache:
             venue = 'trustedLocal'
          else:
@@ -481,11 +501,11 @@ class Run:
       if   venue == 'local':
          newclass = SubmitLocalRun(simToolLocation,inputs,runName,cache)
       elif venue == 'remote':
-         newclass = SubmitRemoteRun(simToolLocation,inputs,runName,remoteAttributes,cache)
+         newclass = SubmitRemoteRun(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue == 'trustedLocal': 
          newclass = TrustedUserLocalRun(simToolLocation,inputs,runName,cache)
       elif venue == 'trustedRemote': 
-         newclass = TrustedUserRemoteRun(simToolLocation,inputs,runName,remoteAttributes,cache)
+         newclass = TrustedUserRemoteRun(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue is None:
          newclass = LocalRun(simToolLocation,inputs,runName,cache)
       else:
