@@ -18,10 +18,27 @@ Q_ = ureg.Quantity
 class Params:
     encoder = JsonEncoder()
 
-    def __init__(self, **kw):
+    def __init__(self, **kwargs):
         self.__members = []
-        for k in kw:
-            self[k] = kw[k]
+
+        if hasattr(self, 'units'):
+            units = kwargs.get('units')
+            if units:
+                try:
+                    self['units'] = ureg.parse_units(units)
+                except:
+                    raise ValueError('Unrecognized units: %s' % (units))
+        if hasattr(self, 'min'):
+            self['min'] = self._getNumericValueFromQuanity(kwargs.get('min'),checkMinMax=False)
+        if hasattr(self, 'max'):
+            self['max'] = self._getNumericValueFromQuanity(kwargs.get('max'),checkMinMax=False)
+
+        if hasattr(self, 'options'):
+            self['options'] = kwargs.get('options')
+
+        for k in kwargs:
+            if k not in ['units','min','max','options']:
+                self[k] = kwargs[k]
 
     def __getitem__(self, key):
         try:
@@ -46,6 +63,12 @@ class Params:
     def __iter__(self):
         return iter(self.__members)
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self.__members:
+            attributeDictionary[attribute] = self[attribute].getAttributeDictionary()
+        return attributeDictionary
+
     def __repr__(self):
         res = []
         for i in self.__members:
@@ -69,10 +92,75 @@ class Params:
             value = Params.encoder.decode(data)
         return value
 
+# TODO pressure needs treatment similar to temperature
+# absolute, gauge, and pressure diff
+    def convert(self, newval):
+        "unit conversion with special temperature conversion"
+        units = self.units
+        if units == ureg.degC or units == ureg.kelvin or units == ureg.degF or units == ureg.degR:
+            if newval.units == ureg.coulomb:
+                # we want temp, so 'C' is degC, not coulombs
+                newval = newval.magnitude * ureg.degC
+            elif newval.units == ureg.farad:
+               # we want temp, so 'F' is degF, not farads
+                newval = newval.magnitude * ureg.degF
+        elif units == ureg.delta_degC or units == ureg.delta_degF:
+            # detect when user means delta temps
+            if newval.units == ureg.degC or newval.units == ureg.coulomb:
+                newval = newval.magnitude * ureg.delta_degC
+            elif newval.units == ureg.degF or units == ureg.farad:
+                newval = newval.magnitude * ureg.delta_degF
+
+        return newval.to(units).magnitude
+
+    def _getNumericValueFromQuanity(self,
+                                    quantity,
+                                    checkMinMax=True):
+        numericValue = None
+        if quantity is not None:
+            if   hasattr(self, 'units') and self.units and type(quantity) == str:
+                numericValue = ureg.parse_expression(quantity)
+                if hasattr(numericValue, 'units'):
+                    numericValue = self.convert(numericValue)
+                else:
+                    try:
+                        numericValue = float(numericValue)
+                    except:
+                        raise ValueError("%s is not a number" % (str(quantity)))
+            elif type(quantity) == str:
+                try:
+                    numericValue = float(quantity)
+                except:
+                    raise ValueError("%s is not a number" % (str(quantity)))
+            elif type(quantity) == int:
+                numericValue = quantity
+            elif type(quantity) == float:
+                numericValue = quantity
+            elif type(quantity) == np.float64:
+                numericValue = float(quantity)
+            else:
+                raise ValueError("%s is not a number (%s)" % (str(quantity),type(quantity)))
+
+            if checkMinMax and numericValue is not None:
+                if self.min is not None and numericValue < self.min:
+                    raise ValueError("Minimum value is %g" % (self.min))
+                if self.max is not None and numericValue > self.max:
+                    raise ValueError("Maximum value is %g" % (self.max))
+
+        return numericValue
+
+    def _getNumericValueForAllQuanities(self,
+                                        quantities,
+                                        checkMinMax=True):
+        for quantity in quantities:
+            if isinstance(quantity,list):
+                yield list(self._getNumericValueForAllQuanities(quantity,checkMinMax=checkMinMax))
+            else:
+                yield self._getNumericValueFromQuanity(quantity,checkMinMax=checkMinMax)
+
 
 class Boolean(Params):
     def __init__(self, **kwargs):
-        # always set these first
         self._value = None
         super(Boolean, self).__init__(**kwargs)
 
@@ -82,7 +170,7 @@ class Boolean(Params):
 
     @value.setter
     def value(self, newval):
-        if type(newval) is not None:
+        if newval is not None:
             if type(newval) != bool:
                 raise ValueError("%s is not type bool" % (str(newval)))
         self._value = newval
@@ -90,6 +178,15 @@ class Boolean(Params):
     @property
     def serialValue(self):
         return self._value
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
 
     def __repr__(self):
         # print all attributes with value last
@@ -104,10 +201,9 @@ class Boolean(Params):
 
 class Integer(Params):
     def __init__(self, **kwargs):
-        # always set these first
-        self.min = kwargs.get('min')
-        self.max = kwargs.get('max')
         self._value = None
+        self.min = None
+        self.max = None
         super(Integer, self).__init__(**kwargs)
 
     @property
@@ -116,7 +212,7 @@ class Integer(Params):
 
     @value.setter
     def value(self, newval):
-        if type(newval) is not None:
+        if newval is not None:
             if type(newval) == str:
                 try:
                     newval = int(newval)
@@ -131,6 +227,15 @@ class Integer(Params):
     @property
     def serialValue(self):
         return self._value
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
 
     def __repr__(self):
         # print all attributes with value last
@@ -156,7 +261,7 @@ class Text(Params):
     @value.setter
     def value(self, newval):
         self._value = None
-        if type(newval) is not None:
+        if newval is not None:
             try:
                 if isinstance(newval,basestring):
                     self._value = newval
@@ -195,6 +300,15 @@ class Text(Params):
         with open(path) as fp:
             return fp.read()
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -209,7 +323,7 @@ class Text(Params):
 class Choice(Params):
     def __init__(self, **kwargs):
         self._value   = None
-        self.options = kwargs.get('options')
+        self.options = None
         super(Choice, self).__init__(**kwargs)
 
     @property
@@ -241,6 +355,15 @@ class Choice(Params):
     def serialValue(self):
         return self._value
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -265,7 +388,7 @@ class List(Params):
     @value.setter
     def value(self, newval):
         self._value = None
-        if type(newval) is not None:
+        if newval is not None:
             if   isinstance(newval,list):
                 self._value = newval
             elif isinstance(newval,tuple):
@@ -295,6 +418,15 @@ class List(Params):
         else:
             return self._value
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -319,7 +451,7 @@ class Dict(Params):
     @value.setter
     def value(self, newval):
         self._value = None
-        if type(newval) is not None:
+        if newval is not None:
             if isinstance(newval,dict):
                 self._value = newval
             else:
@@ -347,6 +479,15 @@ class Dict(Params):
         else:
             return self._value
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -362,14 +503,10 @@ class Array(Params):
     def __init__(self, **kwargs):
         self._value = None
         self._file  = None
+        self.units = None
+        self.min = None
+        self.max = None
         super(Array, self).__init__(**kwargs)
-        units = kwargs.get('units')
-
-        if units:
-            try:
-                self.units = ureg.parse_units(self.units)
-            except:
-                raise ValueError('Unrecognized units: %s' % self.units)
 
     @property
     def value(self):
@@ -378,16 +515,21 @@ class Array(Params):
     @value.setter
     def value(self, newval):
         self._value = None
-        if type(newval) is not None:
+        if newval is not None:
             if   type(newval) is np.ndarray:
                 # papermill expects inputs to be json-encodeable by nbformat.
                 # This is OK for typical input arrays, but if we ever need
                 # to support really large arrays we will need to write a
                 # custom papermill engine.
-                newval = newval.tolist()
-            elif type(newval) is not list:
+                if self.min is not None and newval.min() < self.min:
+                    raise ValueError("Minimum value is %g" % self.min)
+                if self.max is not None and newval.max() > self.max:
+                    raise ValueError("Maximum value is %g" % self.max)
+                self._value = newval.tolist()
+            elif type(newval) is list:
+                self._value = list(self._getNumericValueForAllQuanities(newval))
+            else:
                 raise ValueError("%s is not an array" % (str(newval)))
-            self._value = newval
 
     @property
     def file(self):
@@ -411,6 +553,17 @@ class Array(Params):
         else:
             return self._value
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if   attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            elif attribute == 'units':
+                attributeDictionary[attribute] = "%s" % (self[attribute])
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -424,37 +577,11 @@ class Array(Params):
 
 class Number(Params):
     def __init__(self, **kwargs):
-        # always set these first
-        self.min = kwargs.get('min')
-        self.max = kwargs.get('max')
-        self.units = kwargs.get('units')
         self._value = None
+        self.units = None
+        self.min = None
+        self.max = None
         super(Number, self).__init__(**kwargs)
-        if self.units:
-            try:
-                self.units = ureg.parse_units(self.units)
-            except:
-                raise ValueError('Unrecognized units: %s' % self.units)
-
-# TODO pressure needs treatment similar to temperature
-# absolute, gauge, and pressure diff
-    def convert(self, newval):
-        "unit conversion with special temperature conversion"
-        units = self.units
-        if units == ureg.degC or units == ureg.kelvin or units == ureg.degF or units == ureg.degR:
-            if newval.units == ureg.coulomb:
-                # we want temp, so 'C' is degC, not coulombs
-                newval = newval.magnitude * ureg.degC
-            elif newval.units == ureg.farad:
-               # we want temp, so 'F' is degF, not farads
-                newval = newval.magnitude * ureg.degF
-        elif units == ureg.delta_degC or units == ureg.delta_degF:
-            # detect when user means delta temps
-            if newval.units == ureg.degC or newval.units == ureg.coulomb:
-                newval = newval.magnitude * ureg.delta_degC
-            elif newval.units == ureg.degF or units == ureg.farad:
-                newval = newval.magnitude * ureg.delta_degF
-        return newval.to(units).magnitude
 
     @property
     def value(self):
@@ -462,40 +589,22 @@ class Number(Params):
 
     @value.setter
     def value(self, newval):
-        if type(newval) is not None:
-            if   self.units and type(newval) == str:
-                newval = ureg.parse_expression(newval)
-                if hasattr(newval, 'units'):
-                    newval = self.convert(newval)
-                else:
-                    try:
-                        newval = float(newval)
-                    except:
-                        raise ValueError("%s is not a number" % (str(newval)))
-            elif type(newval) == str:
-                try:
-                    newval = float(newval)
-                except:
-                    raise ValueError("%s is not a number" % (str(newval)))
-            elif type(newval) == int:
-                pass
-            elif type(newval) == float:
-                pass
-            elif type(newval) == np.float64:
-                newval = float(newval)
-            else:
-                raise ValueError("%s is not a number (%s)" % (str(newval),type(newval)))
-
-            if newval is not None:
-                if self.min is not None and newval < self.min:
-                    raise ValueError("Minimum value is %g" % self.min)
-                if self.max is not None and newval > self.max:
-                    raise ValueError("Maximum value is %g" % self.max)
-        self._value = newval
+        self._value = self._getNumericValueFromQuanity(newval)
 
     @property
     def serialValue(self):
         return self._value
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if   attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            elif attribute == 'units':
+                attributeDictionary[attribute] = "%s" % (self[attribute])
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
 
     def __repr__(self):
         # print all attributes with value last
@@ -510,7 +619,6 @@ class Number(Params):
 
 class Image(Params):
     def __init__(self, **kwargs):
-        # always set these first
         self._value       = None
         self._file        = None
         self._imageFormat = None
@@ -523,7 +631,7 @@ class Image(Params):
     @value.setter
     def value(self, newval):
         self._value = None
-        if type(newval) is not None:
+        if newval is not None:
             if newval:
                 try:
                     self._imageFormat = newval.format
@@ -578,6 +686,19 @@ class Image(Params):
                 value = PIL.Image.fromarray(npData)
         return value
 
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                value = self.serialValue
+                if value.startswith('file://'):
+                    attributeDictionary[attribute] = value
+                else:
+                    attributeDictionary[attribute] = '<image>'
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
     def __repr__(self):
         # print all attributes with value last
         res = ''
@@ -592,7 +713,7 @@ class Image(Params):
 class Element(Params):
     def __init__(self, **kwargs):
         self.property = kwargs.get('property', 'symbol')
-        self.options = kwargs.get('options')
+#       self.options = kwargs.get('options')
         self._value = None
         super(Element, self).__init__(**kwargs)
 
@@ -605,6 +726,7 @@ class Element(Params):
         if type(newval) is not str:
             self._value = newval
             return
+
         self._e = element(newval.title())
         try:
             self._value = self._e.__dict__[self.property]
@@ -617,6 +739,15 @@ class Element(Params):
     @property
     def serialValue(self):
         return self._value
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
 
     def __repr__(self):
         # print all attributes with value last
