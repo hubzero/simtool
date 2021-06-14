@@ -27,3 +27,9 @@ History
 
 * Improved search function to locate simTool notebook
 
+0.3.1 (2021-06-14)
+------------------
+
+* Improved input data validation
+* Added web service based cacheing support
+
