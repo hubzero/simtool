@@ -3,7 +3,6 @@ import stat
 import json
 from joblib import Memory
 import uuid
-#from subprocess import call
 import shutil
 import warnings
 import requests
@@ -103,14 +102,10 @@ class FileDataStore:
       os.makedirs(self.rdir)
 
       for prerunFile in prerunFiles:
-#        call('/bin/cp -prL %s/%s %s' % (sourcedir,prerunFile,self.rdir), shell=True)
          self.__copySimToolTree(os.path.join(sourcedir,prerunFile),self.rdir)
       for savedOutputFile in savedOutputFiles:
-#        call('/bin/cp -prL %s/%s %s' % (sourcedir,savedOutputFile,self.rdir), shell=True)
          self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
 
-#     call('/usr/bin/find %s -type d -exec chmod o+rx {} \;' % (self.rdir), shell=True)
-#     call('/usr/bin/find %s -type f -exec chmod o+r {} \;' % (self.rdir), shell=True)
       for rootDir,dirNames,fileNames in os.walk(self.rdir):
          for fileName in fileNames:
             filePath = os.path.join(rootDir,fileName)
@@ -160,8 +155,6 @@ class WSDataStore:
    """
    A data store implemented as a web service.
    """
-#  SQUIDDB_WS = 'http://instanton2.dev.nanohub.org:5000/api/v1'
-
    def __init__(self,simtoolName,simtoolRevision,inputs,cacheLocationRoot):
 
       self.cacheLocationRoot = cacheLocationRoot.rstrip('/') + '/'
@@ -217,8 +210,8 @@ class WSDataStore:
          return True
       except Exception as e:
          return False
- 
- 
+
+
    def write_cache(self,
                    sourcedir,
                    prerunFiles,
@@ -242,27 +235,34 @@ class WSDataStore:
                files.append(('file',open(path,'rb')))
             else:
                dirs.append(savedOutputFile)
- 
+
          # loop all folders found and change the filename to include '_._' only one recursion level supported
          for file in dirs:
             for f in os.listdir(sourcedir+"/"+file):
                path = sourcedir+"/"+file+"/"+f
                if os.path.isfile(path):
                   files.append(('file',(file + "_._" + f, open(path,'rb'))))
- 
+
          # Store the files on the server
+#        print("squidid: %s" % (squidid))
+#        print("files: %s" % (files))
          res = requests.put(self.cacheLocationRoot + "squidlist",
                             data = {'squidid':squidid},
                             files = files
                            )
+         if res.status_code != 200:
+            print("res['status_code']: %s" % (res.status_code))
+            print("res['reason']: %s" % (res.reason))
+            print("res['text']: %s" % (res.text))
       except Exception as e:
+#        print("e: %s" % (e))
          raise e;
- 
- 
+
+
    @staticmethod
    def readFile(path, out_type=None):
       """Reads the contents of an artifact file.
- 
+
       Args:
           path: Path to the artifact
           out_type: The data type
@@ -276,12 +276,12 @@ class WSDataStore:
             res = fp.read()
          return res
       return out_type.read_from_file(path)
- 
- 
+
+
    @staticmethod
    def readData(data, out_type=None):
       """Reads the contents of an artifact data.
- 
+
       Args:
           data: Artifact data
           out_type: The data type
@@ -293,5 +293,5 @@ class WSDataStore:
       if out_type is None:
          return data
       return out_type.read_from_data(data)
- 
- 
+
+
