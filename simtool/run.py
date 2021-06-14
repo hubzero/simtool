@@ -74,7 +74,7 @@ class RunBase:
 
 
    @staticmethod
-   def __copySimToolTree(sdir,ddir):
+   def __copySimToolTreeAsLinks(sdir,ddir):
       simToolFiles = os.listdir(sdir)
       for simToolFile in simToolFiles:
          simToolPath = os.path.join(sdir,simToolFile)
@@ -98,7 +98,7 @@ class RunBase:
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            self.__copySimToolTree(sdir,ddir)
+            self.__copySimToolTreeAsLinks(sdir,ddir)
             # except the notebook itself
             if not keepSimToolNotebook:
                os.remove(os.path.join(ddir,self.nbName))
@@ -108,7 +108,7 @@ class RunBase:
             extraFiles = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",extraFiles)
             if   extraFiles == "*":
-               self.__copySimToolTree(sdir,ddir)
+               self.__copySimToolTreeAsLinks(sdir,ddir)
                if not keepSimToolNotebook:
                   os.remove(os.path.join(ddir,self.nbName))
             elif extraFiles is not None:
