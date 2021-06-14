@@ -1,8 +1,9 @@
 import os
+import stat
 import json
 from joblib import Memory
 import uuid
-from subprocess import call
+#from subprocess import call
 import shutil
 import warnings
 import requests
@@ -57,11 +58,39 @@ class FileDataStore:
          self.rdir = os.path.join(self.cachedir, make_rname(inputs))
 
 
-   def read_cache(self, outdir):
+   @staticmethod
+   def __copySimToolTreeAsLinks(sdir,ddir):
+      simToolFiles = os.listdir(sdir)
+      for simToolFile in simToolFiles:
+         simToolPath = os.path.join(sdir,simToolFile)
+         if os.path.isdir(simToolPath):
+            shutil.copytree(simToolPath,ddir,copy_function=os.symlink)
+         else:
+            os.symlink(simToolPath,os.path.join(ddir,simToolFile))
+
+
+   @staticmethod
+   def __copySimToolTree(spath,ddir):
+      if os.path.isdir(spath):
+         sdir = os.path.realpath(os.path.abspath(spath))
+         simToolFiles = os.listdir(sdir)
+      else:
+         sdir = os.path.dirname(os.path.realpath(os.path.abspath(spath)))
+         simToolFiles = [os.path.basename(spath)]
+
+      for simToolFile in simToolFiles:
+         simToolPath = os.path.join(sdir,simToolFile)
+         if os.path.isdir(simToolPath):
+            shutil.copytree(simToolPath,ddir)
+         else:
+            shutil.copy2(simToolPath,os.path.join(ddir,simToolFile))
+
+
+   def read_cache(self,outdir):
       # reads cache and copies contents to outdir
       if os.path.exists(self.rdir):
 #        print("CACHED. Fetching results from %s" % (self.cacheLocationRoot))
-         call('/bin/cp -sRf %s/. %s' % (self.rdir, outdir), shell=True)
+         self.__copySimToolTreeAsLinks(self.rdir,outdir)
          return True
       return False
 
@@ -74,12 +103,21 @@ class FileDataStore:
       os.makedirs(self.rdir)
 
       for prerunFile in prerunFiles:
-         call('/bin/cp -prL %s/%s %s' % (sourcedir,prerunFile,self.rdir), shell=True)
+#        call('/bin/cp -prL %s/%s %s' % (sourcedir,prerunFile,self.rdir), shell=True)
+         self.__copySimToolTree(os.path.join(sourcedir,prerunFile),self.rdir)
       for savedOutputFile in savedOutputFiles:
-         call('/bin/cp -prL %s/%s %s' % (sourcedir,savedOutputFile,self.rdir), shell=True)
+#        call('/bin/cp -prL %s/%s %s' % (sourcedir,savedOutputFile,self.rdir), shell=True)
+         self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
 
-      call('/usr/bin/find %s -type d -exec chmod o+rx {} \;' % (self.rdir), shell=True)
-      call('/usr/bin/find %s -type f -exec chmod o+r {} \;' % (self.rdir), shell=True)
+#     call('/usr/bin/find %s -type d -exec chmod o+rx {} \;' % (self.rdir), shell=True)
+#     call('/usr/bin/find %s -type f -exec chmod o+r {} \;' % (self.rdir), shell=True)
+      for rootDir,dirNames,fileNames in os.walk(self.rdir):
+         for fileName in fileNames:
+            filePath = os.path.join(rootDir,fileName)
+            os.chmod(filePath,os.stat(filePath).st_mode | stat.S_IROTH)
+         for dirName in dirNames:
+            dirPath = os.path.join(rootDir,dirName)
+            os.chmod(dirPath,os.stat(dirPath).st_mode | stat.S_IROTH | stat.S_IXOTH)
 
 
    @staticmethod
@@ -130,15 +168,13 @@ class WSDataStore:
 
       try:
          # Request the signature for the set of inputs
-         squidid = requests.get(
-             self.cacheLocationRoot + "squidid",
-             headers = {'Content-Type': 'application/json'},
-             data = json.dumps({
-                 'simtoolName':simtoolName,
-                 'simtoolRevision':simtoolRevision,
-                 'inputs':inputs,
-             })
-         )
+         squidid = requests.get(self.cacheLocationRoot + "squidid",
+                                headers = {'Content-Type': 'application/json'},
+                                data = json.dumps({'simtoolName':simtoolName,
+                                                   'simtoolRevision':simtoolRevision,
+                                                   'inputs':inputs}
+                                                 )
+                               )
          sid = squidid.json()
          # The signature id (squidid) is saved on the rdir variable instead of the path to the directory
          self.rdir = sid['id']
@@ -152,13 +188,10 @@ class WSDataStore:
       try:
          squidid = self.rdir
          # request the list of files given the squidid
-         cachefile = requests.get(
-             self.cacheLocationRoot + "squidlist",
-             headers = {'Content-Type': 'application/json'},
-             data = json.dumps({
-                 'squidid':squidid,
-             })
-         )
+         cachefile = requests.get(self.cacheLocationRoot + "squidlist",
+                                  headers = {'Content-Type': 'application/json'},
+                                  data = json.dumps({'squidid':squidid})
+                                 )
          results = cachefile.json()
          if len(results) == 0:
             return False;
@@ -176,11 +209,10 @@ class WSDataStore:
                if not os.path.isdir(outputdir):
                   os.mkdir(outputdir)
             # request the file and save on the proper user file directory
-            r = requests.get(
-                self.cacheLocationRoot + "files/" + result['id'],
-                headers = {"Cache-Control": "no-cache"},
-                params = {"download": "true"}
-            )
+            r = requests.get(self.cacheLocationRoot + "files/" + result['id'],
+                             headers = {"Cache-Control": "no-cache"},
+                             params = {"download": "true"}
+                            )
             open(os.path.join(outputdir,outputname), 'wb').write(r.content)
          return True
       except Exception as e:
@@ -219,11 +251,10 @@ class WSDataStore:
                   files.append(('file',(file + "_._" + f, open(path,'rb'))))
  
          # Store the files on the server
-         res = requests.put(
-             self.cacheLocationRoot + "squidlist",
-             data = {'squidid':squidid},
-             files = files
-         )
+         res = requests.put(self.cacheLocationRoot + "squidlist",
+                            data = {'squidid':squidid},
+                            files = files
+                           )
       except Exception as e:
          raise e;
  
