@@ -81,6 +81,7 @@ class DB(object):
                     simToolObject.file = file
                 else:
                     simToolObject.value = value
+                    value = copy.deepcopy(simToolObject.value)
             except ValueError as e:
                 data = DB.encoder.encode(None)
                 sb.glue(name, data)
