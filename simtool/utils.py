@@ -19,6 +19,19 @@ def parse(inputs):
    return d
 
 
+def getValidatedInputs(inputs):
+   validatedInputs = {}
+   try:
+      params = parse(inputs)
+   except ValueError as e:
+      print(e)
+   else:
+      for param in params:
+         validatedInputs[param] = params[param].value
+
+   return validatedInputs
+
+
 def _get_extra_files(nbPath):
    """ Internal function to search the notebook for a cell tagged
    'FILES' with content 'EXTRA_FILES=xxx' where 'xxx' is a list of files
