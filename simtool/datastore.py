@@ -80,7 +80,7 @@ class FileDataStore:
       for simToolFile in simToolFiles:
          simToolPath = os.path.join(sdir,simToolFile)
          if os.path.isdir(simToolPath):
-            shutil.copytree(simToolPath,ddir)
+            shutil.copytree(simToolPath,os.path.join(ddir,simToolFile))
          else:
             shutil.copy2(simToolPath,os.path.join(ddir,simToolFile))
 
