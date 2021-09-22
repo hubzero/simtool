@@ -80,7 +80,7 @@ class FileDataStore:
       for simToolFile in simToolFiles:
          simToolPath = os.path.join(sdir,simToolFile)
          if os.path.isdir(simToolPath):
-            shutil.copytree(simToolPath,ddir)
+            shutil.copytree(simToolPath,os.path.join(ddir,simToolFile))
          else:
             shutil.copy2(simToolPath,os.path.join(ddir,simToolFile))
 
@@ -101,6 +101,8 @@ class FileDataStore:
       # copy notebook to data store
       os.makedirs(self.rdir)
 
+#     print("write_cache(sourcedir): %s" % (sourcedir))
+#     print("write_cache(cachedir): %s" % (self.rdir))
       for prerunFile in prerunFiles:
          self.__copySimToolTree(os.path.join(sourcedir,prerunFile),self.rdir)
       for savedOutputFile in savedOutputFiles:
