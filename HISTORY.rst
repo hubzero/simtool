@@ -33,4 +33,8 @@ History
 * Improved input data validation
 * Added web service based cacheing support
 
+0.3.2 (2021-09-22)
+------------------
+
+* Fixed for use outside of HUBzero environment
 
