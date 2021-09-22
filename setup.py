@@ -18,11 +18,11 @@ test_requirements = [
 
 setup(
     name='simtool',
-    version='0.3.1',
+    version='0.3.2',
     description="Functions for creating and running Simulation Tools",
     long_description=readme + '\n\n' + history,
-    author="Martin Hunt",
-    author_email='mmh@purdue.edu',
+    maintainer="Steven Clark",
+    maintainer_email='smclark@sdsc.edu',
     url='https://github.com/hubzero/simtool',
     packages=[
         'simtool',
