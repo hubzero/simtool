@@ -9,6 +9,6 @@ joblib==0.13.2
 sphinx-py3doc-enhanced-theme==2.4.0
 nbsphinx==0.4.2
 nbconvert==5.6.1
-Jinja2==2.11
+Jinja2>=2.11.3
 
 
