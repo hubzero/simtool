@@ -9,6 +9,16 @@ import jsonpickle
 from .params import Params
 
 def parse(inputs):
+   """ Convert YAML expression of SimTool input or outputs into a collection
+       of Params objects
+
+      Args:
+          inputs: YAML expression of SimTool inputs or outputs
+
+      Returns:
+          d: dictionary of Params objects.  Each Params objects represents
+             one SimTool input or output.
+   """
    d = Params()
    for i in inputs:
       t = inputs[i]['type']
@@ -20,6 +30,17 @@ def parse(inputs):
 
 
 def getValidatedInputs(inputs):
+   """ Test inputs for validity.  A dictionary of valid values is returned.
+       Any invalid inputs are reported.  This function is intended for use
+       in the 'parameters' cell.  The following code will set parameters to
+       default values and cause an error if default values are in error.
+
+       from simtool import getValidatedInputs
+ 
+       defaultInputs = getValidatedInputs(INPUTS)
+       if defaultInputs:
+           globals().update(defaultInputs)
+   """
    validatedInputs = {}
    try:
       params = parse(inputs)
@@ -92,6 +113,12 @@ def _getSimToolDescription(nbPath):
 
 
 def getGetSimToolNameRevisionFromEnvironment():
+   """ Determine the SimTool name and revision from environment set by submit
+
+   Returns:
+       simToolName: SimTool name set by submit
+       simToolRevision: SimTool revision set by submit
+   """
    simToolName     = None
    simToolRevision = None
    try:
@@ -149,12 +176,7 @@ def _getSimToolNotebookMetaData(nbPath):
 def findSimToolNotebook(simToolName,simToolRevision=None):
    """Lookup simtool by name and revision.
 
-   Returns:
-       A dictionary containing -
-           notebookPath    - the full path name of the simtool notebook,
-           simToolName     - the simtool shortname
-           simToolRevision - the simtool revision (if installed or published)
-           published       - boolean which is True if the notebook is published
+      This function has been replaced by searchForSimTool(simToolName,simToolRevision=None)
    """
    simToolLocation = {}
    simToolLocation['notebookPath']    = None
@@ -254,7 +276,7 @@ def findSimToolNotebook(simToolName,simToolRevision=None):
 
 def findInstalledSimToolNotebooks(querySimToolName=None,
                                   returnString=True):
-   """Find all the revisions of simToolName.
+   """Find all the revisions of a SimTool.
 
    Returns:
       Ordered lists of installed and published revisions
@@ -320,6 +342,20 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
 
 
 def searchForSimTool(simToolName,simToolRevision=None):
+   """Lookup simtool by name and revision.
+
+      Args:
+          simToolName: SimTool name.
+          simToolRevision: SimTool revision, typically rNN.
+
+      Returns:
+          simToolLocation:
+              A dictionary containing -
+                  notebookPath    - the full path name of the simtool notebook,
+                  simToolName     - the simtool shortname
+                  simToolRevision - the simtool revision (if installed or published)
+                  published       - boolean which is True if the notebook is published
+   """
    foundIt = True
    if simToolRevision is None:
       notebookPath = os.path.join('simtool',"%s.ipynb" % (simToolName))
@@ -481,6 +517,13 @@ def getNotebookInputs(nb):
 
 
 def getSimToolInputs(simToolLocation):
+   """ Get required SimTool inputs definition.
+       Args:
+           simToolLocation:  A dictionary containing information on SimTool notebook
+               location and status.
+       Returns:
+           A simtool.Params object defining expected inputs.
+   """
    nbPath = simToolLocation['notebookPath']
    nb = load_notebook_node(nbPath)
 
@@ -564,6 +607,13 @@ def getNotebookOutputs(nb):
 
 
 def getSimToolOutputs(simToolLocation):
+   """ Get SimTool outputs definition.
+       Args:
+           simToolLocation:  A dictionary containing information on SimTool notebook
+               location and status.
+       Returns:
+           A simtool.Params object defining expected outputs.
+   """
    nbPath = simToolLocation['notebookPath']
    nb = load_notebook_node(nbPath)
 

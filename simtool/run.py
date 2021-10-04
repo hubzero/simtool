@@ -458,7 +458,7 @@ class Run:
        If the tool is not published, and cache is True, a local user cache will be used.
 
        Args:
-           simToolLocation:  A list containing information on SimTool notebook
+           simToolLocation:  A dictionary containing information on SimTool notebook
                location and status.
            inputs:  A SimTools Params object or a dictionary of key-value pairs.
            runName:  An optional name for the run.  A unique name will be generated
@@ -471,14 +471,15 @@ class Run:
                parameter is False, do neither of these.  The SimTool must be published
                to access the global cache, otherwise each user has a local cache
                that can be accesed.
-           venue:  'noSubmit' to ignore presense of submit.
-                   'local' to use 'submit --local'.
-                   'trustedLocal' to use 'submit --local' as the trusted user for 
-                       global cache interaction.
-                   'remote' to use 'submit' to execute job on remote resource.
-                   'trustedRemote' to use 'submit' to execute job on remote resource
-                       as the trusted user for global cache interaction.
-                   Default is None, in which case venue is determined based on the
+           venue:  
+               noSubmit: to ignore presense of submit.
+               local: to use 'submit --local'.
+               trustedLocal: to use 'submit --local' as the trusted user for 
+                   global cache interaction.
+               remote: to use 'submit' to execute job on remote resource.
+               trustedRemote: to use 'submit' to execute job on remote resource
+                   as the trusted user for global cache interaction.
+               Default is None, in which case venue is determined based on the
                    availability of submit and the other arguments.
        Returns:
            A Run object.
