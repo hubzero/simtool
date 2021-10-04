@@ -38,3 +38,9 @@ History
 
 * Fixed for use outside of HUBzero environment
 
+0.3.3 (2021-10-04)
+------------------
+
+* Improved automatic documentation generation
+* Fixed Image value setting
+
