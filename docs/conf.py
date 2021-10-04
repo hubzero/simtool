@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'SimTool'
-copyright = u"2019, HUBzero Foundation"
+copyright = u"2021, HUBzero Foundation"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
