@@ -6,8 +6,6 @@ Reference
 
 .. autofunction:: searchForSimTool
 
-.. autofunction:: findInstalledSimToolNotebooks
-
 .. autofunction:: findSimTools
 
 .. autofunction:: getSimToolInputs

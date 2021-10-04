@@ -1,3 +1,9 @@
+# @package      hubzero-simtool
+# @file         params.py
+# @copyright    Copyright (c) 2019-2021 The Regents of the University of California.
+# @license      http://opensource.org/licenses/MIT MIT
+# @trademark    HUBzero is a registered trademark of The Regents of the University of California.
+#
 import os
 import numpy as np
 from mendeleev import element

@@ -1,3 +1,9 @@
+# @package      hubzero-simtool
+# @file         db.py
+# @copyright    Copyright (c) 2019-2021 The Regents of the University of California.
+# @license      http://opensource.org/licenses/MIT MIT
+# @trademark    HUBzero is a registered trademark of The Regents of the University of California.
+#
 import os
 import copy
 import scrapbook as sb
