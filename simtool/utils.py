@@ -52,7 +52,7 @@ def getValidatedInputs(inputs):
           inputs: YAML representation of SimTool inputs.
 
       Returns:
-          validatedInputs: dictionary of Params.
+          dictionary of Params.
    """
    validatedInputs = {}
    try:
@@ -362,7 +362,7 @@ def searchForSimTool(simToolName,simToolRevision=None):
           simToolRevision: SimTool revision, typically rNN.
 
       Returns:
-          simToolLocation: A dictionary containing
+          A simToolLocation dictionary containing
               notebookPath    - the full path name of the simtool notebook,
               simToolName     - the simtool shortname
               simToolRevision - the simtool revision (if installed or published)
