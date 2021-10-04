@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'SimTool'
-copyright = u"2021, HUBzero Foundation"
+copyright = u"2021, The Regents of the University of California"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -218,7 +218,7 @@ latex_elements = {
 latex_documents = [
     ('index', 'simtool.tex',
      u'SimTool Documentation',
-     u'HUBzero Foundation', 'manual'),
+     u'HUBzero, San Diego Supercomputer Center', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at
@@ -249,7 +249,7 @@ latex_documents = [
 man_pages = [
     ('index', 'simtool',
      u'SimTool Documentation',
-     [u'HUBzero Foundation, LLC'], 1)
+     [u'HUBzero, San Diego Supercomputer Center'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -264,7 +264,7 @@ man_pages = [
 texinfo_documents = [
     ('index', 'simtool',
      u'SimTool Documentation',
-     u'HUBzero Foundation, LLC',
+     u'HUBzero, San Diego Supercomputer Center',
      'simtool',
      'One line description of project.',
      'Miscellaneous'),
