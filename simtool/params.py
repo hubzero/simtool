@@ -636,7 +636,13 @@ class Image(Params):
                 try:
                     self._imageFormat = newval.format
                 except:
-                    pass
+                    if   type(newval) is list:
+                        self._value = newval
+                    elif type(newval) is np.ndarray:
+                        self._value = newval.tolist()
+#                   else:
+#                       print("Image.value: format failed")
+#                       print("type(newval): %s" % (type(newval)))
                 else:
                     self._value = np.array(newval).tolist()
 
