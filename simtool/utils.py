@@ -15,15 +15,15 @@ import jsonpickle
 from .params import Params
 
 def parse(inputs):
-   """ Convert YAML expression of SimTool input or outputs into a collection
-       of Params objects
+   """Convert YAML expression of SimTool input or outputs into a collection
+      of Params objects
 
       Args:
           inputs: YAML expression of SimTool inputs or outputs
 
       Returns:
           d: dictionary of Params objects.  Each Params objects represents
-             one SimTool input or output.
+              one SimTool input or output.
    """
    d = Params()
    for i in inputs:
@@ -36,16 +36,23 @@ def parse(inputs):
 
 
 def getValidatedInputs(inputs):
-   """ Test inputs for validity.  A dictionary of valid values is returned.
-       Any invalid inputs are reported.  This function is intended for use
-       in the 'parameters' cell.  The following code will set parameters to
-       default values and cause an error if default values are in error.
+   """Test inputs for validity.
 
-       from simtool import getValidatedInputs
- 
-       defaultInputs = getValidatedInputs(INPUTS)
-       if defaultInputs:
-           globals().update(defaultInputs)
+      Any invalid inputs are reported.  This function is intended for use
+      in the 'parameters' cell.  The following code will set parameters to
+      default values and cause an error if default values are in error.
+
+      Note:
+          from simtool import getValidatedInputs
+
+          defaultInputs = getValidatedInputs(INPUTS)
+          if defaultInputs: globals().update(defaultInputs)
+
+      Args:
+          inputs: YAML representation of SimTool inputs.
+
+      Returns:
+          validatedInputs: dictionary of Params.
    """
    validatedInputs = {}
    try:
@@ -60,7 +67,7 @@ def getValidatedInputs(inputs):
 
 
 def _get_extra_files(nbPath):
-   """ Internal function to search the notebook for a cell tagged
+   """Internal function to search the notebook for a cell tagged
    'FILES' with content 'EXTRA_FILES=xxx' where 'xxx' is a list of files
    or '*'
    """
@@ -92,7 +99,7 @@ def _get_extra_files(nbPath):
 
 
 def _getSimToolDescription(nbPath):
-   """ Internal function to search the notebook for a cell tagged
+   """Internal function to search the notebook for a cell tagged
    'DESCRIPTION' with content 'DESCRIPTION=xxx' where 'xxx' is a
    string describing the simtool
    """
@@ -119,11 +126,11 @@ def _getSimToolDescription(nbPath):
 
 
 def getGetSimToolNameRevisionFromEnvironment():
-   """ Determine the SimTool name and revision from environment set by submit
+   """Determine the SimTool name and revision from environment set by submit
 
-   Returns:
-       simToolName: SimTool name set by submit
-       simToolRevision: SimTool revision set by submit
+      Returns:
+          simToolName: SimTool name set by submit
+          simToolRevision: SimTool revision set by submit
    """
    simToolName     = None
    simToolRevision = None
@@ -284,8 +291,8 @@ def findInstalledSimToolNotebooks(querySimToolName=None,
                                   returnString=True):
    """Find all the revisions of a SimTool.
 
-   Returns:
-      Ordered lists of installed and published revisions
+       Returns:
+           Ordered lists of installed and published revisions
    """
    installedSimToolRevisions = {}
 
@@ -355,12 +362,11 @@ def searchForSimTool(simToolName,simToolRevision=None):
           simToolRevision: SimTool revision, typically rNN.
 
       Returns:
-          simToolLocation:
-              A dictionary containing -
-                  notebookPath    - the full path name of the simtool notebook,
-                  simToolName     - the simtool shortname
-                  simToolRevision - the simtool revision (if installed or published)
-                  published       - boolean which is True if the notebook is published
+          simToolLocation: A dictionary containing
+              notebookPath    - the full path name of the simtool notebook,
+              simToolName     - the simtool shortname
+              simToolRevision - the simtool revision (if installed or published)
+              published       - boolean which is True if the notebook is published
    """
    foundIt = True
    if simToolRevision is None:
@@ -460,10 +466,10 @@ def searchForSimTool(simToolName,simToolRevision=None):
 def _find_simTool(simToolName,simToolRevision=None):
     """Lookup simtool by name and revision.
 
-    Returns:
-        A tuple containing the full path name of the simtool notebook,
-        the tool name, the tool revision (if published) and a boolean which is True if the notebook
-        is published
+        Returns:
+            A tuple containing the full path name of the simtool notebook,
+            the tool name, the tool revision (if published) and a boolean which is True if the notebook
+            is published
     """
     if   simToolRevision and not simToolName.endswith('.ipynb'):
         simToolNotebook = simToolName + '.ipynb'
@@ -523,12 +529,13 @@ def getNotebookInputs(nb):
 
 
 def getSimToolInputs(simToolLocation):
-   """ Get required SimTool inputs definition.
-       Args:
-           simToolLocation:  A dictionary containing information on SimTool notebook
-               location and status.
-       Returns:
-           A simtool.Params object defining expected inputs.
+   """Get required SimTool inputs definition.
+
+      Args:
+          simToolLocation:  A dictionary containing information on SimTool notebook
+              location and status.
+      Returns:
+          A simtool.Params object defining expected inputs.
    """
    nbPath = simToolLocation['notebookPath']
    nb = load_notebook_node(nbPath)
@@ -613,12 +620,13 @@ def getNotebookOutputs(nb):
 
 
 def getSimToolOutputs(simToolLocation):
-   """ Get SimTool outputs definition.
-       Args:
-           simToolLocation:  A dictionary containing information on SimTool notebook
-               location and status.
-       Returns:
-           A simtool.Params object defining expected outputs.
+   """Get SimTool outputs definition.
+
+      Args:
+          simToolLocation:  A dictionary containing information on SimTool notebook
+              location and status.
+      Returns:
+          A simtool.Params object defining expected outputs.
    """
    nbPath = simToolLocation['notebookPath']
    nb = load_notebook_node(nbPath)
