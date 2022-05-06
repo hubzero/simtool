@@ -103,11 +103,16 @@ class DB(object):
         if file == None:
             path = self._get_ref(value)
             if path:
-                if not os.path.isfile(path):
+                if   not os.path.exists(path):
                     data = DB.encoder.encode(None)
                     sb.glue(name, data)
                     self.setSimToolSaveErrorOccurred(1)
-                    raise FileNotFoundError(f'File "{path}" not found.')
+                    raise FileNotFoundError(f'File "{path}" does not exist.')
+                elif not os.path.isfile(path):
+                    data = DB.encoder.encode(None)
+                    sb.glue(name, data)
+                    self.setSimToolSaveErrorOccurred(1)
+                    raise FileNotFoundError(f'File "{path}" is not a file.')
                 if path.startswith("/") or path.startswith(".."):
                     data = DB.encoder.encode(None)
                     sb.glue(name, data)
@@ -122,11 +127,16 @@ class DB(object):
                     sb.glue(name, data)
                     self.setSimToolSaveErrorOccurred(1)
                     raise ValueError('Cannot set both "value" and "file" in save()')
-                if not os.path.isfile(file):
+                if   not os.path.exists(file):
                     data = DB.encoder.encode(None)
                     sb.glue(name, data)
                     self.setSimToolSaveErrorOccurred(1)
-                    raise FileNotFoundError(f'File "{file}" not found.')
+                    raise FileNotFoundError(f'File "{file}" does not exist.')
+                elif not os.path.isfile(file):
+                    data = DB.encoder.encode(None)
+                    sb.glue(name, data)
+                    self.setSimToolSaveErrorOccurred(1)
+                    raise FileNotFoundError(f'File "{file}" is not a file.')
                 if file.startswith("/") or file.startswith(".."):
                     data = DB.encoder.encode(None)
                     sb.glue(name, data)
