@@ -59,7 +59,7 @@ class RunBase:
          os.makedirs(self.remoteSimTool)
       else:
          self.remoteSimTool = None
- 
+
       self.cached = False
       self.dstore = None
       if not trustedExecution:
@@ -110,7 +110,10 @@ class RunBase:
                os.remove(os.path.join(ddir,self.nbName))
          else:
             if keepSimToolNotebook and remote:
-               os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
+               if sdir.startswith('/apps/'):
+                  os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
+               else:
+                  raise ValueError("SimTool notebook must be installed or published to used remotely")
             extraFiles = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",extraFiles)
             if   extraFiles == "*":
@@ -517,9 +520,9 @@ class Run:
          newclass = SubmitLocalRun(simToolLocation,inputs,runName,cache)
       elif venue == 'remote':
          newclass = SubmitRemoteRun(simToolLocation,inputs,runName,remoteRunAttributes,cache)
-      elif venue == 'trustedLocal': 
+      elif venue == 'trustedLocal':
          newclass = TrustedUserLocalRun(simToolLocation,inputs,runName,cache)
-      elif venue == 'trustedRemote': 
+      elif venue == 'trustedRemote':
          newclass = TrustedUserRemoteRun(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue == 'noSubmit':
          newclass = LocalRun(simToolLocation,inputs,runName,cache)
