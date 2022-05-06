@@ -5,6 +5,7 @@
 # @trademark    HUBzero is a registered trademark of The Regents of the University of California.
 #
 import os
+import sys
 import numpy as np
 from mendeleev import element
 import PIL.Image
@@ -27,6 +28,13 @@ class Params:
     def __init__(self, **kwargs):
         self.__members = []
 
+        if hasattr(self, 'property'):
+            self['property'] = kwargs.get('property','symbol')
+
+        for k in kwargs:
+            if k in ['type','description']:
+                self[k] = kwargs[k]
+
         if hasattr(self, 'units'):
             units = kwargs.get('units')
             if units:
@@ -43,8 +51,17 @@ class Params:
             self['options'] = kwargs.get('options')
 
         for k in kwargs:
-            if k not in ['units','min','max','options']:
+            if k in ['value']:
                 self[k] = kwargs[k]
+
+        for k in kwargs:
+            if k not in ['type','value','description','units','min','max','options','property']:
+                print('Parameter type %s does not have %s attribute.' % (self['type'],k),file=sys.stderr)
+
+        for k in kwargs:
+            if k in ['units','min','max','options','property']:
+                if not hasattr(self, k):
+                    print('Parameter type %s does not have %s attribute.' % (self['type'],k),file=sys.stderr)
 
     def __getitem__(self, key):
         try:
@@ -724,9 +741,8 @@ class Image(Params):
 
 class Element(Params):
     def __init__(self, **kwargs):
-        self.property = kwargs.get('property', 'symbol')
-#       self.options = kwargs.get('options')
         self._value = None
+        self.property = None
         super(Element, self).__init__(**kwargs)
 
     @property
