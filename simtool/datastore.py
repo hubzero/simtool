@@ -200,21 +200,22 @@ class WSDataStore:
             os.mkdir(outdir)
          # for each file on the response, download the blob
          for result in results:
-            outputname = result['name']
-            outputdir = outdir
-            # WARNING: filenames with '_._' mean they are included on a directory, only 1 level is supported
-            if "_._" in outputname:
-               outputfile = outputname.split("_._")
-               outputname = outputfile[1]
-               outputdir = outdir + "/" + outputfile[0]
+            if "_._" in result['name']:
+               outputfile = result['name'].split("_._")
+               outputname = outputfile[-1]
+               outputdir = os.path.join(outdir,os.sep.join(outputfile[:-1]))
                if not os.path.isdir(outputdir):
-                  os.mkdir(outputdir)
+                  os.makedirs(outputdir)
+            else:
+               outputdir = outdir
+               outputname = result['name']
             # request the file and save on the proper user file directory
             r = requests.get(self.cacheLocationRoot + "files/" + result['id'],
                              headers = {"Cache-Control": "no-cache"},
                              params = {"download": "true"}
                             )
-            open(os.path.join(outputdir,outputname), 'wb').write(r.content)
+            with open(os.path.join(outputdir,outputname), 'wb') as fp:
+               fp.write(r.content)
          return True
       except Exception as e:
          return False
@@ -225,38 +226,47 @@ class WSDataStore:
                    prerunFiles,
                    savedOutputFiles):
       # copy notebook to data store
+      cacheFps = []
       try:
          squidid = self.rdir
-         files = []
-         dirs = []
-         # loop prerunFiles, save file blobs on the list or the folder to be processed later
+         cacheFilePaths = []
+         # loop prerunFiles, save full paths
          for prerunFile in prerunFiles:
-            path = sourcedir+"/"+prerunFile
-            if os.path.isfile(path):
-               files.append(('file',open(path,'rb')))
+            cacheFilePath = os.path.realpath(os.path.join(sourcedir,prerunFile))
+            if os.path.isdir(cacheFilePath):
+               for rootPath,dirs,files in os.walk(cacheFilePath):
+                  for cacheFile in files:
+                     cacheFilePaths.append(os.path.join(rootPath,cacheFile))
             else:
-               dirs.append(prerunFile)
-         # loop savedOutputFiles, save file blobs on the list or the folder to be processed later
+               cacheFilePaths.append(cacheFilePath)
+         # loop savedOutputFiles, save full paths
          for savedOutputFile in savedOutputFiles:
-            path = sourcedir+"/"+savedOutputFile
-            if os.path.isfile(path):
-               files.append(('file',open(path,'rb')))
+            cacheFilePath = os.path.realpath(os.path.join(sourcedir,savedOutputFile))
+            if os.path.isdir(cacheFilePath):
+               for rootPath,dirs,files in os.walk(cacheFilePath):
+                  for cacheFile in files:
+                     cacheFilePaths.append(os.path.join(rootPath,cacheFile))
             else:
-               dirs.append(savedOutputFile)
+               cacheFilePaths.append(cacheFilePath)
 
-         # loop all folders found and change the filename to include '_._' only one recursion level supported
-         for file in dirs:
-            for f in os.listdir(sourcedir+"/"+file):
-               path = sourcedir+"/"+file+"/"+f
-               if os.path.isfile(path):
-                  files.append(('file',(file + "_._" + f, open(path,'rb'))))
+         # loop all files found and change the path separtor from / to _._, flattening the path.
+         cacheFiles = []
+         rootPath = os.path.realpath(sourcedir)
+         for cacheFilePath in cacheFilePaths:
+            relativePath = os.path.relpath(cacheFilePath,rootPath)
+            cacheFp = open(relativePath,'rb')
+            cacheFps.append(cacheFp)
+            if os.path.dirname(relativePath):
+               cacheFiles.append(('file',("_._".join(relativePath.split(os.sep)),cacheFp)))
+            else:
+               cacheFiles.append(('file',cacheFp))
 
          # Store the files on the server
 #        print("squidid: %s" % (squidid))
-#        print("files: %s" % (files))
+#        print("files: %s" % (cacheFiles))
          res = requests.put(self.cacheLocationRoot + "squidlist",
                             data = {'squidid':squidid},
-                            files = files
+                            files = cacheFiles
                            )
          if res.status_code != 200:
             print("res['status_code']: %s" % (res.status_code))
@@ -265,6 +275,10 @@ class WSDataStore:
       except Exception as e:
 #        print("e: %s" % (e))
          raise e;
+      finally:
+         for cacheFp in cacheFps:
+            cacheFp.close()
+         del cacheFps
 
 
    @staticmethod
