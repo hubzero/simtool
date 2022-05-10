@@ -44,3 +44,13 @@ History
 * Improved automatic documentation generation
 * Fixed Image value setting
 
+0.3.4 (2022-05-10)
+------------------
+
+* Verify location of installed or published sim2L notebook
+* Differentiate between missing path and wrong path type (file/directory)
+* Stricter enforcement of param attributes
+* Retain directory structure when saving results.
+* Close open files to avoid file descriptor leakage
+* Added magic functions needed to run notebooks in parallel (MPI)
+
