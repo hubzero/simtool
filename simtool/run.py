@@ -38,7 +38,7 @@ class RunBase:
    SIMTOOLRUNPREFIX   = '.simtool'
 
    def __init__(self,simToolLocation,inputs,runName,cache,
-                     remoteAttributes=None,
+                     createOutDir=True,remoteAttributes=None,
                      remote=False,trustedExecution=False):
       self.nbName = simToolLocation['simToolName'] + '.ipynb'
       self.inputs = copy.deepcopy(inputs)
@@ -47,12 +47,17 @@ class RunBase:
       self.outputs = copy.deepcopy(getSimToolOutputs(simToolLocation))
 
 # Create landing area for results
-      if runName:
-         self.runName = runName
+      if createOutDir:
+         if runName:
+            self.runName = runName
+         else:
+            self.runName = str(uuid.uuid4()).replace('-','')
+         self.outdir = os.path.join(get_experiment(),self.runName)
+         os.makedirs(self.outdir)
       else:
-         self.runName = str(uuid.uuid4()).replace('-','')
-      self.outdir = os.path.join(get_experiment(),self.runName)
-      os.makedirs(self.outdir)
+         self.outdir = os.getcwd()
+         self.runName = os.path.basename(self.outdir)
+
       self.outname = os.path.join(self.outdir,self.nbName)
       if remote:
          self.remoteSimTool = os.path.join(self.outdir,RunBase.SIMTOOLRUNPREFIX)
@@ -104,16 +109,26 @@ class RunBase:
          if simToolLocation['published']:
             # We want to allow simtools to be more than just the notebook,
             # so we recursively copy the notebook directory.
-            self.__copySimToolTreeAsLinks(sdir,ddir)
-            # except the notebook itself
-            if not keepSimToolNotebook:
-               os.remove(os.path.join(ddir,self.nbName))
+            extraFiles = _get_extra_files(simToolLocation['notebookPath'])
+            if   extraFiles == "*":
+               self.__copySimToolTreeAsLinks(sdir,ddir)
+               # except the notebook itself
+               if not keepSimToolNotebook:
+                  os.remove(os.path.join(ddir,self.nbName))
+            elif extraFiles is not None:
+               for extraFile in extraFiles:
+                  os.symlink(os.path.abspath(os.path.join(sdir,extraFile)),os.path.join(ddir,extraFile))
+               if keepSimToolNotebook:
+                  os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
+            else:
+               if keepSimToolNotebook:
+                  os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
          else:
             if keepSimToolNotebook and remote:
                if sdir.startswith('/apps/'):
                   os.symlink(os.path.join(sdir,self.nbName),os.path.join(ddir,self.nbName))
                else:
-                  raise ValueError("SimTool notebook must be installed or published to used remotely")
+                  raise ValueError("SimTool notebook must be installed or published to be used remotely")
             extraFiles = _get_extra_files(simToolLocation['notebookPath'])
             # print("EXTRA FILES:",extraFiles)
             if   extraFiles == "*":
@@ -270,7 +285,7 @@ class LocalRun(RunBase):
 
    def __init__(self,simToolLocation,inputs,runName,cache):
       RunBase.__init__(self,simToolLocation,inputs,runName,cache,
-                            remoteAttributes=None,
+                            createOutDir=True,remoteAttributes=None,
                             remote=False,trustedExecution=False)
 
       if not self.cached:
@@ -297,7 +312,7 @@ class SubmitLocalRun(RunBase):
 
    def __init__(self,simToolLocation,inputs,runName,cache):
       RunBase.__init__(self,simToolLocation,inputs,runName,cache,
-                            remoteAttributes=None,
+                            createOutDir=True,remoteAttributes=None,
                             remote=False,trustedExecution=False)
 
       if not self.cached:
@@ -344,7 +359,7 @@ class SubmitRemoteRun(RunBase):
 
    def __init__(self,simToolLocation,inputs,runName,remoteAttributes,cache):
       RunBase.__init__(self,simToolLocation,inputs,runName,cache,
-                            remoteAttributes=remoteAttributes,
+                            createOutDir=True,remoteAttributes=remoteAttributes,
                             remote=True,trustedExecution=False)
 
       if not self.cached:
@@ -407,7 +422,7 @@ class TrustedUserLocalRun(RunBase):
       if simToolLocation['published']:
 # Only published simTool can be run with trusted user
          RunBase.__init__(self,simToolLocation,inputs,runName,cache,
-                               remoteAttributes=None,
+                               createOutDir=True,remoteAttributes=None,
                                remote=False,trustedExecution=True)
 
          self.setupInputFiles(simToolLocation,
@@ -435,7 +450,7 @@ class TrustedUserRemoteRun(RunBase):
       if simToolLocation['published']:
 # Only published simTool can be run with trusted user
          RunBase.__init__(self,simToolLocation,inputs,runName,cache,
-                               remoteAttributes=remoteAttributes,
+                               createOutDir=True,remoteAttributes=remoteAttributes,
                                remote=True,trustedExecution=True)
 
          self.setupInputFiles(simToolLocation,
@@ -453,6 +468,26 @@ class TrustedUserRemoteRun(RunBase):
 
          prerunFiles = None
          self.processOutputs(cache,prerunFiles,trustedExecution=True)
+      else:
+         print("The simtool %s/%s is not published" % (simToolLocation['simToolName'],simToolLocation['simToolRevision']))
+
+
+class WebServicePrepare(RunBase):
+   """
+   Prepare notebook for web service execution.
+   """
+
+   def __init__(self,simToolLocation,inputs,runName,remoteAttributes,cache):
+      if simToolLocation['published']:
+# Only published simTool can be run with trusted user
+         RunBase.__init__(self,simToolLocation,inputs,runName,cache,
+                               createOutDir=False,remoteAttributes=remoteAttributes,
+                               remote=True,trustedExecution=True)
+
+         self.setupInputFiles(simToolLocation,
+                              doSimToolFiles=True,keepSimToolNotebook=True,remote=True,
+                              doUserInputFiles=True,
+                              doSimToolInputFile=True)
       else:
          print("The simtool %s/%s is not published" % (simToolLocation['simToolName'],simToolLocation['simToolRevision']))
 
@@ -526,6 +561,8 @@ class Run:
          newclass = TrustedUserRemoteRun(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue == 'noSubmit':
          newclass = LocalRun(simToolLocation,inputs,runName,cache)
+      elif venue == 'webService': 
+         newclass = WebServicePrepare(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue is None:
          newclass = LocalRun(simToolLocation,inputs,runName,cache)
       else:
