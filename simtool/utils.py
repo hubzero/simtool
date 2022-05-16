@@ -495,7 +495,7 @@ def _find_simTool(simToolName,simToolRevision=None):
             raise FileNotFoundError('No simtool named "%s, "' % (simToolName))
 
 
-def _getNotebookeCellYAMLcontent(nb,
+def _getNotebookCellYAMLcontent(nb,
                                  yamlTag):
    yamlDict = None
 # ignore lines up to and including %%yaml (cell magic)
@@ -513,7 +513,7 @@ def _getNotebookeCellYAMLcontent(nb,
       if yamlLineNumber >= 0:
          yamlContent = '\n'.join(cellSourceLines[yamlLineNumber+1:])
          break
-      
+
    if yamlContent:
       yamlDict = yaml.load(yamlContent, Loader=yaml.FullLoader)
 
@@ -521,7 +521,7 @@ def _getNotebookeCellYAMLcontent(nb,
 
 
 def getNotebookInputs(nb):
-   yamlDict = _getNotebookeCellYAMLcontent(nb,"INPUTS")
+   yamlDict = _getNotebookCellYAMLcontent(nb,"INPUTS")
    if yamlDict:
       return parse(yamlDict)
    else:
@@ -598,21 +598,33 @@ def _get_inputs_cache_dict(inputs):
 
 
 def _get_inputFiles(inputs):
-   if type(inputs) == dict:
-      return None
-
    inputFiles = []
-   for i in inputs:
-      try:
-         if inputs[i].file:
-            inputFiles.append(inputs[i].file)
-      except:
-         pass
+   if type(inputs) == dict:
+      for input in inputs:
+         value = inputs[input]
+         checkForFile = False
+         try:
+            if isinstance(value,basestring):
+               checkForFile = True
+         except NameError:
+            if isinstance(value,str):
+               checkForFile = True
+
+         if checkForFile:
+            if value.startswith('file://'):
+               inputFiles.append(value[7:])
+   else:
+      for i in inputs:
+         try:
+            if inputs[i].file:
+               inputFiles.append(inputs[i].file)
+         except:
+            pass
    return inputFiles
 
 
 def getNotebookOutputs(nb):
-   yamlDict = _getNotebookeCellYAMLcontent(nb,"OUTPUTS")
+   yamlDict = _getNotebookCellYAMLcontent(nb,"OUTPUTS")
    if yamlDict:
       return parse(yamlDict)
    else:
