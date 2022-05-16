@@ -54,3 +54,10 @@ History
 * Close open files to avoid file descriptor leakage
 * Added magic functions needed to run notebooks in parallel (MPI)
 
+0.3.5 (2022-05-16)
+------------------
+
+* Trap missing simToolSaveErrorOccurred and simToolAllOutputsSaved in result notebook
+* Return list of input files whether inputs is specified as dictionary or YAML
+* Add run preparation method used for web service application. Previously used external shell script
+
