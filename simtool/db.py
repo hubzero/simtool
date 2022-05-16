@@ -31,7 +31,11 @@ class DB(object):
 
 
     def getSimToolSaveErrorOccurred(self):
-        simToolSaveErrorOccurred = DB.encoder.decode(self.read('simToolSaveErrorOccurred',display=False,raw=False))
+        simToolSaveErrorOccurred = self.read('simToolSaveErrorOccurred',display=False,raw=False)
+        if simToolSaveErrorOccurred is not None:
+            simToolSaveErrorOccurred = DB.encoder.decode(simToolSaveErrorOccurred)
+        else:
+            simToolSaveErrorOccurred = 1
         return simToolSaveErrorOccurred
 
 
@@ -41,7 +45,11 @@ class DB(object):
 
 
     def getSimToolAllOutputsSaved(self):
-        simToolAllOutputsSaved = DB.encoder.decode(self.read('simToolAllOutputsSaved',display=False,raw=False))
+        simToolAllOutputsSaved = self.read('simToolAllOutputsSaved',display=False,raw=False)
+        if simToolAllOutputsSaved is not None:
+            simToolAllOutputsSaved = DB.encoder.decode(simToolAllOutputsSaved)
+        else:
+            simToolAllOutputsSaved = 0
         return simToolAllOutputsSaved
 
 
