@@ -18,7 +18,7 @@ test_requirements = [
 
 setup(
     name='simtool',
-    version='0.3.4',
+    version='0.3.5',
     description="Functions for creating and running Simulation Tools",
     long_description=readme + '\n\n' + history,
     maintainer="Steven Clark",
