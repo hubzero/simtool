@@ -22,17 +22,17 @@ def parse(inputs):
           inputs: YAML expression of SimTool inputs or outputs
 
       Returns:
-          d: dictionary of Params objects.  Each Params objects represents
-              one SimTool input or output.
+          parameters: dictionary of Params objects.  Each Params objects
+                      represents one SimTool input or output.
    """
-   d = Params()
-   for i in inputs:
-      t = inputs[i]['type']
-      if t in Params.types:
-         d[i] = Params.types[t](**inputs[i])
+   parameters = Params()
+   for label in inputs:
+      paramType = inputs[label]['type']
+      if paramType in Params.types:
+         parameters[label] = Params.types[paramType](**inputs[label])
       else:
-         print('Unknown type:', t, file=sys.stderr)
-   return d
+         print('Unknown type:', paramType, file=sys.stderr)
+   return parameters
 
 
 def getValidatedInputs(inputs):
@@ -545,54 +545,91 @@ def getSimToolInputs(simToolLocation):
 
 def _get_inputs_dict(inputs,
                      inputFileRunPrefix=None):
-   if type(inputs) == dict:
-      return inputs
    inputsDict = {}
-   for i in inputs:
-      value = inputs[i].serialValue
+   if type(inputs) == dict:
+      for label in inputs:
+         value = inputs[label]
 
-      checkForFile = False
-      try:
-         if isinstance(value,basestring):
-            checkForFile = True
-      except NameError:
-         if isinstance(value,str):
-            checkForFile = True
+         checkForFile = False
+         try:
+            if isinstance(value,basestring):
+               checkForFile = True
+         except NameError:
+            if isinstance(value,str):
+               checkForFile = True
 
-      if checkForFile:
-         if value.startswith('file://'):
-            path = value[7:]
-            fileName = os.path.basename(path)
-            if inputFileRunPrefix:
-               value = 'file://' + os.path.join(inputFileRunPrefix,fileName)
-            else:
-               value = 'file://' + fileName
-      inputsDict[i] = value
+         if checkForFile:
+            if value.startswith('file://'):
+               path = value[7:]
+               fileName = os.path.basename(path)
+               if inputFileRunPrefix:
+                  value = 'file://' + os.path.join(inputFileRunPrefix,fileName)
+               else:
+                  value = 'file://' + fileName
+         inputsDict[label] = value
+   else:
+      for label in inputs:
+         value = inputs[label].serialValue
+
+         checkForFile = False
+         try:
+            if isinstance(value,basestring):
+               checkForFile = True
+         except NameError:
+            if isinstance(value,str):
+               checkForFile = True
+
+         if checkForFile:
+            if value.startswith('file://'):
+               path = value[7:]
+               fileName = os.path.basename(path)
+               if inputFileRunPrefix:
+                  value = 'file://' + os.path.join(inputFileRunPrefix,fileName)
+               else:
+                  value = 'file://' + fileName
+         inputsDict[label] = value
 
    return inputsDict
 
 
 def _get_inputs_cache_dict(inputs):
-   if type(inputs) == dict:
-      return inputs
    inputsCacheDict = {}
-   for i in inputs:
-      value = inputs[i].serialValue
+   if type(inputs) == dict:
+      for label in inputs:
+         value = inputs[label]
 
-      checkForFile = False
-      try:
-         if isinstance(value,basestring):
-            checkForFile = True
-      except NameError:
-         if isinstance(value,str):
-            checkForFile = True
+         checkForFile = False
+         try:
+            if isinstance(value,basestring):
+               checkForFile = True
+         except NameError:
+            if isinstance(value,str):
+               checkForFile = True
 
-      if checkForFile:
-         if value.startswith('file://'):
-            path = value[7:]
-            with open(path,'rb') as fp:
-               value = fp.read()
-      inputsCacheDict[i] = value
+         if checkForFile:
+            if value.startswith('file://'):
+               path = value[7:]
+               with open(path,'rb') as fp:
+                  value = fp.read()
+         inputsCacheDict[label] = value
+   else:
+      for label in inputs:
+         value = inputs[label].serialValue
+
+         checkForFile = False
+         try:
+            if isinstance(value,basestring):
+               checkForFile = True
+         except NameError:
+            if isinstance(value,str):
+               checkForFile = True
+
+         if checkForFile:
+            if value.startswith('file://'):
+               path = value[7:]
+               with open(path,'rb') as fp:
+                  value = fp.read()
+         inputsCacheDict[label] = value
 
    return inputsCacheDict
 
@@ -600,8 +637,8 @@ def _get_inputs_cache_dict(inputs):
 def _get_inputFiles(inputs):
    inputFiles = []
    if type(inputs) == dict:
-      for input in inputs:
-         value = inputs[input]
+      for label in inputs:
+         value = inputs[label]
          checkForFile = False
          try:
             if isinstance(value,basestring):
@@ -614,10 +651,10 @@ def _get_inputFiles(inputs):
             if value.startswith('file://'):
                inputFiles.append(value[7:])
    else:
-      for i in inputs:
+      for label in inputs:
          try:
-            if inputs[i].file:
-               inputFiles.append(inputs[i].file)
+            if inputs[label].file:
+               inputFiles.append(inputs[label].file)
          except:
             pass
    return inputFiles
