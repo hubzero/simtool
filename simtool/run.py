@@ -44,7 +44,7 @@ class RunBase:
       self.inputs = copy.deepcopy(inputs)
       self.input_dict = _get_inputs_dict(self.inputs,inputFileRunPrefix=RunBase.INPUTFILERUNPREFIX)
       self.inputFiles = _get_inputFiles(self.inputs)
-      self.outputs = copy.deepcopy(getSimToolOutputs(simToolLocation))
+      self.outputNames = copy.deepcopy(getSimToolOutputs(simToolLocation).keys())
 
 # Create landing area for results
       if createOutDir:
@@ -248,7 +248,7 @@ class RunBase:
 #        if len(self.savedOutputFiles) > 0:
 #           print("Saved output files: %s" % (self.savedOutputFiles))
 
-         requiredOutputs  = set(self.outputs.keys())
+         requiredOutputs  = set(self.outputNames)
          deliveredOutputs = set(self.savedOutputs)
          missingOutputs = requiredOutputs - deliveredOutputs
          extraOutputs   = deliveredOutputs - requiredOutputs
