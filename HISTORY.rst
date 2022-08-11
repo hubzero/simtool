@@ -61,3 +61,9 @@ History
 * Return list of input files whether inputs is specified as dictionary or YAML
 * Add run preparation method used for web service application. Previously used external shell script
 
+0.3.6 (2022-08-11)
+------------------
+
+* Extend utility functions for getting information about input files to use either parameter or simple dictionary description.
+* Prepare for newer papermill versions
+
