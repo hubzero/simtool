@@ -20,7 +20,17 @@ except ImportError:
 else:
    submitAvailable = True
 
+import warnings
 import papermill as pm
+# location of papermill command line interface corresponding to the imported library
+# The PATH environment variable is not set to include the bin directory
+# of kernel/Python environment.
+# Replace lib/pythonX.Y/site-packages/papermill/__init__.py with bin/papermill
+try:
+   papermillCLI = os.sep.join(pm.__file__.split(os.sep)[:-5] + ["bin","papermill"])
+except:
+   papermillCLI = "papermill"
+
 import yaml
 from .db import DB
 from .experiment import get_experiment
@@ -298,7 +308,11 @@ class LocalRun(RunBase):
          prerunFiles.append(self.nbName)
 
          # FIXME: run in background. wait or check status.
-         pm.execute_notebook(simToolLocation['notebookPath'],self.outname,parameters=self.input_dict,cwd=self.outdir)
+         # Suppress
+         # FutureWarning: Method cleanup(connection_file=True) is deprecated, use cleanup_resources(restart=False).
+         with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore',category=FutureWarning)
+            pm.execute_notebook(simToolLocation['notebookPath'],self.outname,parameters=self.input_dict,cwd=self.outdir)
 
          self.processOutputs(cache,prerunFiles,trustedExecution=False)
       else:
@@ -330,7 +344,7 @@ class SubmitLocalRun(RunBase):
          # FIXME: run in background. wait or check status.
          submitCommand = SubmitCommand()
          submitCommand.setLocal()
-         submitCommand.setCommand("papermill")
+         submitCommand.setCommand(papermillCLI)
          submitCommand.setCommandArguments(["-f","inputs.yaml",
                                             simToolLocation['notebookPath'],
                                             self.nbName])
