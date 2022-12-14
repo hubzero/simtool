@@ -6,6 +6,6 @@ papermill
 jsonpickle
 mendeleev
 pillow
-nteract-scrapbook
+scrapbook
 joblib
 nbsphinx
