@@ -67,3 +67,12 @@ History
 * Extend utility functions for getting information about input files to use either parameter or simple dictionary description.
 * Prepare for newer papermill versions
 
+0.4.1 (2022-12-13)
+------------------
+
+* Added new parameter classes Tag and File.
+* Use checksum and file size to compute sim2L run squidId.
+* Improve eapermill efficiency by reducing implicit I/O done during execution.
+* Added support for sim2L metrics collection - record hit and miss by squidid.
+* Added getParamsFromDictionary() and content() methods to standardize processing on INPUTS in sim2L notebooks.
+
