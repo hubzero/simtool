@@ -10,7 +10,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = ['ipython', 'pint', 'numpy', 'papermill', 'jsonpickle', 
-                'mendeleev', 'pillow', 'nteract-scrapbook', 'joblib']
+                'mendeleev', 'pillow', 'scrapbook', 'joblib']
 
 test_requirements = [
     # TODO: put package test requirements here
@@ -18,8 +18,8 @@ test_requirements = [
 
 setup(
     name='simtool',
-    version='0.3.6',
-    description="Functions for creating and running Simulation Tools",
+    version='0.4.1',
+    description="Functions for creating and running sim2Ls",
     long_description=readme + '\n\n' + history,
     maintainer="Steven Clark",
     maintainer_email='smclark@sdsc.edu',
