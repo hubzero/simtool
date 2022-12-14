@@ -88,6 +88,10 @@ class DB(object):
         if   name not in self.out and force is False:
             raise ValueError('\"%s\" not in output schema!' % name)
         elif name in self.out:
+            if name not in self.outputsToBeSaved:
+                self.outputsToBeSaved.append(name)
+                if len(self.outputsToBeSaved) == 1:
+                    self.setSimToolAllOutputsSaved(0)
 # do data validation
             simToolObject = copy.deepcopy(self.out[name])
             try:

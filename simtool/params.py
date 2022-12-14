@@ -25,6 +25,8 @@ Q_ = ureg.Quantity
 class Params:
     encoder = JsonEncoder()
 
+    KEYWORDPRINTORDER = ['type', 'description', 'units', 'max', 'min', 'options', 'property', 'value']
+
     def __init__(self, **kwargs):
         self.__members = []
 
@@ -43,9 +45,9 @@ class Params:
                 except:
                     raise ValueError('Unrecognized units: %s' % (units))
         if hasattr(self, 'min'):
-            self['min'] = self._getNumericValueFromQuanity(kwargs.get('min'),checkMinMax=False)
+            self['min'] = self._getNumericValueFromQuantity(kwargs.get('min'),checkMinMax=False)
         if hasattr(self, 'max'):
-            self['max'] = self._getNumericValueFromQuanity(kwargs.get('max'),checkMinMax=False)
+            self['max'] = self._getNumericValueFromQuantity(kwargs.get('max'),checkMinMax=False)
 
         if hasattr(self, 'options'):
             self['options'] = kwargs.get('options')
@@ -105,7 +107,7 @@ class Params:
 
     @staticmethod
     def read_from_file(path):
-        with open(path) as fp:
+        with open(path,'r') as fp:
             return Params.encoder.decode(fp.read())
 
     @staticmethod
@@ -113,6 +115,31 @@ class Params:
         value = None
         if data:
             value = Params.encoder.decode(data)
+        return value
+
+    def content(self,
+                returnAs=None):
+        value = None
+
+        if   returnAs == 'value':
+            if hasattr(self, '_value'):
+                value = self._value
+        elif returnAs == 'file':
+            if hasattr(self, '_file'):
+                if self._file:
+                    value = self._file
+        else:
+            if   hasattr(self, '_file'):
+                if   self._file:
+                    if hasattr(self, '_value'):
+                        value = self.read_from_file(self._file)
+                    else:
+                        value = self._file
+                elif hasattr(self, '_value'):
+                    value = self._value
+            elif hasattr(self, '_value'):
+                value = self._value
+
         return value
 
 # TODO pressure needs treatment similar to temperature
@@ -136,9 +163,9 @@ class Params:
 
         return newval.to(units).magnitude
 
-    def _getNumericValueFromQuanity(self,
-                                    quantity,
-                                    checkMinMax=True):
+    def _getNumericValueFromQuantity(self,
+                                     quantity,
+                                     checkMinMax=True):
         numericValue = None
         if quantity is not None:
             if   hasattr(self, 'units') and self.units and type(quantity) == str:
@@ -179,7 +206,7 @@ class Params:
             if isinstance(quantity,list):
                 yield list(self._getNumericValueForAllQuanities(quantity,checkMinMax=checkMinMax))
             else:
-                yield self._getNumericValueFromQuanity(quantity,checkMinMax=checkMinMax)
+                yield self._getNumericValueFromQuantity(quantity,checkMinMax=checkMinMax)
 
 
 class Boolean(Params):
@@ -212,13 +239,25 @@ class Boolean(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % (self.value)
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -261,13 +300,25 @@ class Integer(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -320,7 +371,7 @@ class Text(Params):
 
     @staticmethod
     def read_from_file(path):
-        with open(path) as fp:
+        with open(path,'r') as fp:
             return fp.read()
 
     def getAttributeDictionary(self):
@@ -333,19 +384,98 @@ class Text(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
+        return res
+
+
+class Tag(Params):
+    MAXTAGLENGTH = 255
+    def __init__(self, **kwargs):
+        self._value = None
+        super(Tag, self).__init__(**kwargs)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, newval):
+        self._value = None
+        if newval is not None:
+            try:
+                if isinstance(newval,basestring):
+                    if len(newval) <= self.MAXTAGLENGTH:
+                        self._value = newval
+                    else:
+                        raise ValueError("len(%s) > %d" % (newval,self.MAXTAGLENGTH))
+                else:
+                    raise ValueError("%s is not a string" % (str(newval)))
+            except NameError:
+                if isinstance(newval,str):
+                    if len(newval) <= self.MAXTAGLENGTH:
+                        self._value = newval
+                    else:
+                        raise ValueError("len(%s) > %d" % (newval,self.MAXTAGLENGTH))
+                else:
+                    raise ValueError("%s is not a string" % (str(newval)))
+
+    @property
+    def serialValue(self):
+        return self._value
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            if attribute == 'value':
+                attributeDictionary[attribute] = self.serialValue
+            else:
+                attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
+    def __repr__(self):
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
 class Choice(Params):
     def __init__(self, **kwargs):
-        self._value   = None
+        self._value  = None
         self.options = None
         super(Choice, self).__init__(**kwargs)
 
@@ -388,13 +518,25 @@ class Choice(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -451,13 +593,25 @@ class List(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -512,13 +666,25 @@ class Dict(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -588,13 +754,25 @@ class Array(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -612,7 +790,7 @@ class Number(Params):
 
     @value.setter
     def value(self, newval):
-        self._value = self._getNumericValueFromQuanity(newval)
+        self._value = self._getNumericValueFromQuantity(newval)
 
     @property
     def serialValue(self):
@@ -630,13 +808,90 @@ class Number(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
+        return res
+
+
+class File(Params):
+    def __init__(self, **kwargs):
+        self._file = None
+        super(File, self).__init__(**kwargs)
+
+    @property
+    def value(self):
+        return self._file
+
+    @property
+    def file(self):
+        return self._file
+
+    @file.setter
+    def file(self, newval):
+        self._file = None
+        if newval:
+            try:
+                if os.path.exists(newval):
+                    if os.path.isfile(newval):
+                        self._file = newval
+            except:
+                pass
+
+    @property
+    def serialValue(self):
+        if self._file:
+            return self._make_ref(self._file)
+        else:
+            return None
+
+    @staticmethod
+    def read_from_file(path):
+        with open(path,'rb') as fp:
+            return fp.read()
+
+    def getAttributeDictionary(self):
+        attributeDictionary = {}
+        for attribute in self:
+            attributeDictionary[attribute] = self[attribute]
+        return attributeDictionary
+
+    def __repr__(self):
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -729,13 +984,26 @@ class Image(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: <image>\n'
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                if self.value:
+                    value = "<image>"
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
 
 
@@ -778,14 +1046,27 @@ class Element(Params):
         return attributeDictionary
 
     def __repr__(self):
-        # print all attributes with value last
-        res = ''
-        for i in self:
-            if i != 'value':
-                res += '    %s: %s\n' % (i, self[i])
-        if self.value is not None:
-            res += '    value: %s\n' % self.value
+        res = ""
+        for keyWord in self.KEYWORDPRINTORDER:
+            if keyWord != 'value':
+                if keyWord in self:
+                    if not self[keyWord] is None:
+                        res += '    %s: %s\n' % (keyWord, self[keyWord])
+        if 'value' in self.KEYWORDPRINTORDER:
+            value = None
+            try:
+                fileValue = self.file
+            except:
+                fileValue = None
+            else:
+                if fileValue:
+                    value = self._make_ref(fileValue)
+            if not value:
+                value = self.value
+            if not value is None:
+                res += '    value: %s\n' % (value)
         return res
+
 
 # register param types
 # Dictionary that maps strings to class names.
@@ -793,11 +1074,13 @@ Params.types = {
     'Boolean': Boolean,
     'Integer': Integer,
     'Text': Text,
+    'Tag': Tag,
     'Choice': Choice,
     'List': List,
     'Dict': Dict,
     'Array': Array,
     'Number': Number,
+    'File': File,
     'Image': Image,
     'Element': Element
 }

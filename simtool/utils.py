@@ -9,6 +9,7 @@ import sys
 import re
 import glob
 import nbformat
+import hashlib
 from papermill.iorw import load_notebook_node
 import yaml
 import jsonpickle
@@ -22,7 +23,7 @@ def parse(inputs):
           inputs: YAML expression of SimTool inputs or outputs
 
       Returns:
-          parameters: dictionary of Params objects.  Each Params objects
+          parameters: dictionary of Params objects.  Each Params object
                       represents one SimTool input or output.
    """
    parameters = Params()
@@ -32,6 +33,49 @@ def parse(inputs):
          parameters[label] = Params.types[paramType](**inputs[label])
       else:
          print('Unknown type:', paramType, file=sys.stderr)
+   return parameters
+
+
+def getParamsFromDictionary(inputs,
+                            valueDictionary):
+   """Convert dictionary of input values to a collection of Params objects
+
+      Args:
+          inputs: dictionary expression of SimTool inputs or outputs
+
+          valueDictionary: dictionary of values. valueDictionary.keys()
+                           should match inputs.keys()
+      Returns:
+          parameters: dictionary of Params objects.  Each Params object
+                      represents one SimTool input or output.
+   """
+   try:
+      parameters = parse(inputs)
+   except ValueError as e:
+      print(e)
+   else:
+      for label in inputs:
+         value = valueDictionary[label]
+         checkForFile = False
+         if hasattr(parameters[label],'file'):
+            try:
+               if isinstance(value,basestring):
+                  checkForFile = True
+            except NameError:
+               if isinstance(value,str):
+                  checkForFile = True
+
+         if checkForFile:
+            if value.startswith('file://'):
+               parameters[label].file = value[7:]
+            else:
+               parameters[label].value = value
+         else:
+            try:
+               parameters[label].value = value
+            except:
+               pass
+
    return parameters
 
 
@@ -592,6 +636,24 @@ def _get_inputs_dict(inputs,
    return inputsDict
 
 
+def _get_file_cache_properties(filePath):
+   fileProperties = {}
+   if os.path.exists(filePath):
+      md5Hash = hashlib.md5()
+      with open(filePath,'rb') as f:
+         # Read and update hash in chunks of 4K
+         for block in iter(lambda: f.read(4096),b""):
+            md5Hash.update(block)
+         fileProperties['checksum'] = md5Hash.hexdigest()
+
+      fileProperties['fileSize'] = os.lstat(filePath).st_size
+   else:
+      fileProperties['checksum'] = ""
+      fileProperties['fileSize'] = 0
+
+   return fileProperties
+
+
 def _get_inputs_cache_dict(inputs):
    inputsCacheDict = {}
    if type(inputs) == dict:
@@ -609,8 +671,7 @@ def _get_inputs_cache_dict(inputs):
          if checkForFile:
             if value.startswith('file://'):
                path = value[7:]
-               with open(path,'rb') as fp:
-                  value = fp.read()
+               value = _get_file_cache_properties(path)
          inputsCacheDict[label] = value
    else:
       for label in inputs:
@@ -627,8 +688,7 @@ def _get_inputs_cache_dict(inputs):
          if checkForFile:
             if value.startswith('file://'):
                path = value[7:]
-               with open(path,'rb') as fp:
-                  value = fp.read()
+               value = _get_file_cache_properties(path)
          inputsCacheDict[label] = value
 
    return inputsCacheDict

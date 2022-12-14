@@ -4,6 +4,7 @@
 # @license      http://opensource.org/licenses/MIT MIT
 # @trademark    HUBzero is a registered trademark of The Regents of the University of California.
 #
+import sys
 import os
 import uuid
 import copy
@@ -11,7 +12,8 @@ import json
 import shutil
 import tempfile
 import stat
-from subprocess import call
+import subprocess
+import select
 import traceback
 try:
    from hubzero.submit.SubmitCommand import SubmitCommand
@@ -35,7 +37,8 @@ import yaml
 from .db import DB
 from .experiment import get_experiment
 from .datastore import FileDataStore
-from .utils import _get_inputs_dict, _get_extra_files, _get_inputFiles, _get_inputs_cache_dict, getSimToolOutputs
+from .utils import getSimToolInputs, getSimToolOutputs, getParamsFromDictionary
+from .utils import _get_inputs_dict, _get_extra_files, _get_inputFiles, _get_inputs_cache_dict
 
 
 class RunBase:
@@ -55,6 +58,7 @@ class RunBase:
       self.input_dict = _get_inputs_dict(self.inputs,inputFileRunPrefix=RunBase.INPUTFILERUNPREFIX)
       self.inputFiles = _get_inputFiles(self.inputs)
       self.outputNames = copy.deepcopy(getSimToolOutputs(simToolLocation).keys())
+      inputsSchema = getSimToolInputs(simToolLocation)
 
 # Create landing area for results
       if createOutDir:
@@ -68,6 +72,9 @@ class RunBase:
          self.outdir = os.getcwd()
          self.runName = os.path.basename(self.outdir)
 
+      print("runname = %s" % (self.runName))
+      print("outdir  = %s" % (self.outdir))
+
       self.outname = os.path.join(self.outdir,self.nbName)
       if remote:
          self.remoteSimTool = os.path.join(self.outdir,RunBase.SIMTOOLRUNPREFIX)
@@ -79,14 +86,14 @@ class RunBase:
       self.dstore = None
       if not trustedExecution:
          if cache:
-            hashableInputs = _get_inputs_cache_dict(self.inputs)
+            hashableInputs = _get_inputs_cache_dict(getParamsFromDictionary(inputsSchema,self.input_dict))
             self.dstore = RunBase.DSHANDLER(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs)
             del hashableInputs
             self.cached = self.dstore.read_cache(self.outdir)
 
-         print("runname   = %s" % (self.runName))
-         print("outdir    = %s" % (self.outdir))
-         print("cached    = %s" % (self.cached))
+#        print("runname = %s" % (self.runName))
+#        print("outdir  = %s" % (self.outdir))
+         print("cached  = %s" % (self.cached))
 
       self.inputsPath = None
       self.db = None
@@ -162,24 +169,129 @@ class RunBase:
             yaml.dump(self.input_dict,fp)
 
 
+   def executeCommand(self,
+                      commandArgs,
+                      stdin=None,
+                      streamOutput=False,
+                      reportErrorExit=True):
+      exitStatus = 0
+      outData = []
+      errData = []
+      bufferSize = 4096
+
+      if stdin:
+         try:
+            fpStdin = open(stdin,'rb')
+         except:
+            exitStatus = 1
+
+      if exitStatus == 0:
+         try:
+            if stdin:
+               child = subprocess.Popen(commandArgs,bufsize=bufferSize,
+                                        stdin=fpStdin,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        close_fds=True)
+            else:
+               child = subprocess.Popen(commandArgs,bufsize=bufferSize,
+                                        stdin=None,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        close_fds=True)
+         except OSError as e:
+            print("Command: %s\nfailed: %s." % (commandArgs,e.args[1]),file=sys.stderr)
+            exitStatus = e.args[0]
+         else:
+            childPid   = child.pid
+            childout   = child.stdout
+            childoutFd = childout.fileno()
+            childerr   = child.stderr
+            childerrFd = childerr.fileno()
+
+            outEOF = False
+            errEOF = False
+
+            while True:
+               toCheck = []
+               if not outEOF:
+                  toCheck.append(childoutFd)
+               if not errEOF:
+                  toCheck.append(childerrFd)
+               try:
+                  # wait for input
+                  ready = select.select(toCheck,[],[])
+               except select.error:
+                  ready = {}
+                  ready[0] = []
+
+               if childoutFd in ready[0]:
+                  outChunk = os.read(childoutFd,bufferSize).decode('utf-8')
+                  if outChunk == '':
+                     outEOF = True
+                  outData.append(outChunk)
+                  if streamOutput and outChunk:
+                     print(outChunk,end='')
+
+               if childerrFd in ready[0]:
+                  errChunk = os.read(childerrFd,bufferSize).decode('utf-8')
+                  if errChunk == '':
+                     errEOF = True
+                  errData.append(errChunk)
+                  if streamOutput and errChunk:
+                     print(errChunk,end='',file=sys.stderr)
+
+               if outEOF and errEOF:
+                  break
+
+            pid,exitStatus = os.waitpid(childPid,0)
+            if exitStatus != 0:
+               if   os.WIFSIGNALED(exitStatus):
+                  if reportErrorExit:
+                     print("%s failed w/ signal %d" % (commandArgs,os.WTERMSIG(exitStatus)),file=sys.stderr)
+               else:
+                  if os.WIFEXITED(exitStatus):
+                     exitStatus = os.WEXITSTATUS(exitStatus)
+                  if reportErrorExit:
+                     print("%s failed w/ exit code %d" % (commandArgs,exitStatus),file=sys.stderr)
+               if not streamOutput:
+                  if reportErrorExit:
+                     print("%s" % ("".join(errData)),file=sys.stderr)
+
+         if stdin:
+            fpStdin.close()
+
+      return(exitStatus,"".join(outData),"".join(errData))
+
+
    def checkTrustedUserCache(self,simToolLocation):
-      submitCommand = SubmitCommand()
-      submitCommand.setLocal()
-      submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
-      submitCommand.setCommandArguments([simToolLocation['simToolName'],
-                                         simToolLocation['simToolRevision'],
-                                         self.inputsPath,
-                                         self.outdir])
-      submitCommand.show()
       try:
-         result = submitCommand.submit()
+         del os.environ['SIM2L_CACHE_SQUID']
+      except:
+         pass
+
+      print("Checking for cached result")
+      try:
+         commandArgs = [os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'),
+                        simToolLocation['simToolName'],
+                        simToolLocation['simToolRevision'],
+                        self.inputsPath,
+                        self.outdir]
+         exitCode,commandStdout,commandStderr = self.executeCommand(commandArgs,streamOutput=True,reportErrorExit=False)
       except:
          exitCode = 1
-         print(traceback.format_exc())
+         print(traceback.format_exc(),file=sys.stderr)
       else:
-         exitCode = result['exitCode']
+         squidIdPath = os.path.join(self.outdir,'.squidid')
+         if(os.path.exists(squidIdPath) > 0):
+            if(os.path.getsize(squidIdPath) > 0):
+               with open(squidIdPath,'r') as fp:
+                  os.environ['SIM2L_CACHE_SQUID'] = fp.read().strip()
+         else:
+            print(self.outdir)
+            print(os.listdir(self.outdir))
          if exitCode == 0:
-            print("Found cached result")
+            print("Found cached result = %s" % (os.environ.get('SIM2L_CACHE_SQUID','squidId does not exist')))
 
       self.cached = exitCode == 0
 
@@ -192,20 +304,17 @@ class RunBase:
          with open(argumentsPath,'w') as fp:
             json.dump(remoteAttributes,fp)
 
-      submitCommand = SubmitCommand()
-      submitCommand.setLocal()
-      submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperRunSimTool.sh'))
-      submitCommand.setCommandArguments([simToolLocation['simToolName'],
-                                         simToolLocation['simToolRevision'],
-                                         self.inputsPath])
-      submitCommand.show()
+      print("Executing simTool: %s" % (os.getenv("SIM2L_CACHE_SQUID")))
       try:
-         result = submitCommand.submit()
+         commandArgs = [os.path.join(os.sep,'apps','bin','ionhelperRunSimTool.sh'),
+                        simToolLocation['simToolName'],
+                        simToolLocation['simToolRevision'],
+                        self.inputsPath]
+         exitCode,commandStdout,commandStderr = self.executeCommand(commandArgs,streamOutput=True,reportErrorExit=False)
       except:
          exitCode = 1
-         print(traceback.format_exc())
+         print(traceback.format_exc(),file=sys.stderr)
       else:
-         exitCode = result['exitCode']
          if exitCode != 0:
             print("SimTool execution failed")
       self.cached = exitCode == 0
@@ -214,37 +323,31 @@ class RunBase:
    def retrieveTrustedUserResults(self,simToolLocation):
       if self.cached:
 #        Retrieve result from cache
-         submitCommand = SubmitCommand()
-         submitCommand.setLocal()
-         submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'))
-         submitCommand.setCommandArguments([simToolLocation['simToolName'],
-                                            simToolLocation['simToolRevision'],
-                                            self.inputsPath,
-                                            self.outdir])
-         submitCommand.show()
+         print("Fetching cached result")
          try:
-            result = submitCommand.submit()
+            commandArgs = [os.path.join(os.sep,'apps','bin','ionhelperGetArchivedSimToolResult.sh'),
+                           simToolLocation['simToolName'],
+                           simToolLocation['simToolRevision'],
+                           self.inputsPath,
+                           self.outdir]
+            exitCode,commandStdout,commandStderr = self.executeCommand(commandArgs,streamOutput=True,reportErrorExit=False)
          except:
             exitCode = 1
-            print(traceback.format_exc())
+            print(traceback.format_exc(),file=sys.stderr)
          else:
-            exitCode = result['exitCode']
             if exitCode != 0:
                print("Retrieval of generated cached result failed")
       else:
 #        Retrieve error result from ionhelper delivery
-         submitCommand = SubmitCommand()
-         submitCommand.setLocal()
-         submitCommand.setCommand(os.path.join(os.sep,'apps','bin','ionhelperLoadSimToolResult.sh'))
-         submitCommand.setCommandArguments([self.outdir])
-         submitCommand.show()
+         print("Fetching error result")
          try:
-            result = submitCommand.submit()
+            commandArgs = [os.path.join(os.sep,'apps','bin','ionhelperLoadSimToolResult.sh'),
+                           self.outdir]
+            exitCode,commandStdout,commandStderr = self.executeCommand(commandArgs,streamOutput=True,reportErrorExit=False)
          except:
             exitCode = 1
-            print(traceback.format_exc())
+            print(traceback.format_exc(),file=sys.stderr)
          else:
-            exitCode = result['exitCode']
             if exitCode != 0:
                print("Retrieval of failed execution result failed")
 
@@ -345,7 +448,10 @@ class SubmitLocalRun(RunBase):
          submitCommand = SubmitCommand()
          submitCommand.setLocal()
          submitCommand.setCommand(papermillCLI)
-         submitCommand.setCommandArguments(["-f","inputs.yaml",
+         submitCommand.setCommandArguments(["--no-request-save-on-cell-execute",
+                                            "--autosave-cell-every","0",
+                                            "--no-use-black-format-injection",
+                                            "--parameters_file","inputs.yaml",
                                             simToolLocation['notebookPath'],
                                             self.nbName])
          submitCommand.show()
@@ -353,7 +459,7 @@ class SubmitLocalRun(RunBase):
             result = submitCommand.submit()
          except:
             exitCode = 1
-            print(traceback.format_exc())
+            print(traceback.format_exc(),file=sys.stderr)
          else:
             exitCode = result['exitCode']
             if exitCode != 0:
@@ -411,7 +517,7 @@ class SubmitRemoteRun(RunBase):
             result = submitCommand.submit()
          except:
             exitCode = 1
-            print(traceback.format_exc())
+            print(traceback.format_exc(),file=sys.stderr)
          else:
             exitCode = result['exitCode']
             if exitCode != 0:

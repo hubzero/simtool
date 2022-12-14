@@ -12,6 +12,7 @@ import uuid
 import shutil
 import warnings
 import requests
+import traceback
 
 class FileDataStore:
    """
@@ -63,13 +64,21 @@ class FileDataStore:
          self.rdir = os.path.join(self.cachedir, make_rname(inputs))
 
 
+   def getSimToolSquidId(self):
+      squidId = None
+      if self.rdir:
+         squidId = os.path.basename(self.rdir)
+
+      return squidId
+
+
    @staticmethod
    def __copySimToolTreeAsLinks(sdir,ddir):
       simToolFiles = os.listdir(sdir)
       for simToolFile in simToolFiles:
          simToolPath = os.path.join(sdir,simToolFile)
          if os.path.isdir(simToolPath):
-            shutil.copytree(simToolPath,ddir,copy_function=os.symlink)
+            shutil.copytree(simToolPath,os.path.join(ddir,simToolFile),copy_function=os.symlink)
          else:
             os.symlink(simToolPath,os.path.join(ddir,simToolFile))
 
@@ -79,16 +88,20 @@ class FileDataStore:
       if os.path.isdir(spath):
          sdir = os.path.realpath(os.path.abspath(spath))
          simToolFiles = os.listdir(sdir)
+         destinationDir = os.path.join(ddir,os.path.basename(sdir))
+         if not os.path.isdir(destinationDir):
+            os.mkdir(destinationDir)
       else:
          sdir = os.path.dirname(os.path.realpath(os.path.abspath(spath)))
          simToolFiles = [os.path.basename(spath)]
+         destinationDir = ddir
 
       for simToolFile in simToolFiles:
          simToolPath = os.path.join(sdir,simToolFile)
          if os.path.isdir(simToolPath):
-            shutil.copytree(simToolPath,os.path.join(ddir,simToolFile))
+            shutil.copytree(simToolPath,os.path.join(destinationDir,simToolFile))
          else:
-            shutil.copy2(simToolPath,os.path.join(ddir,simToolFile))
+            shutil.copy2(simToolPath,os.path.join(destinationDir,simToolFile))
 
 
    def read_cache(self,outdir):
@@ -112,7 +125,14 @@ class FileDataStore:
       for prerunFile in prerunFiles:
          self.__copySimToolTree(os.path.join(sourcedir,prerunFile),self.rdir)
       for savedOutputFile in savedOutputFiles:
-         self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
+         savedDirectory,savedFile = os.path.split(savedOutputFile)
+         if savedDirectory:
+            cacheDirectory = os.path.join(self.rdir,savedDirectory)
+            if not os.path.isdir(cacheDirectory):
+               os.mkdir(cacheDirectory)
+            self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),cacheDirectory)
+         else:
+            self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
 
       for rootDir,dirNames,fileNames in os.walk(self.rdir):
          for fileName in fileNames:
@@ -180,8 +200,14 @@ class WSDataStore:
          # The signature id (squidid) is saved on the rdir variable instead of the path to the directory
          self.rdir = sid['id']
       except Exception as e:
+         print("squidId determination failed")
+         print(traceback.format_exc())
          # If there is any error obtaining the squidid the mode is changed to global. should it be "local"?
          self.rdir = None
+
+
+   def getSimToolSquidId(self):
+      return self.rdir
 
 
    def read_cache(self, outdir):
