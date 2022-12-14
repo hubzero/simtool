@@ -5,7 +5,7 @@ numpy==1.16.5
 mendeleev==0.4.5
 pint==0.17
 nteract-scrapbook==0.2.1
-joblib==0.13.2
+joblib==1.2.0
 sphinx-py3doc-enhanced-theme==2.4.0
 nbsphinx==0.4.2
 nbconvert==5.6.1
