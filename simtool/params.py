@@ -188,6 +188,8 @@ class Params:
                 numericValue = quantity
             elif type(quantity) == np.float64:
                 numericValue = float(quantity)
+            elif type(quantity) == np.int64:
+                numericValue = float(quantity)
             else:
                 raise ValueError("%s is not a number (%s)" % (str(quantity),type(quantity)))
 
