@@ -37,7 +37,7 @@ class FileDataStore:
       if not os.path.isdir(self.cachedir):
          os.makedirs(self.cachedir)
 
-      memory = Memory(cachedir=self.cachetabdir, verbose=0)
+      memory = Memory(location=self.cachetabdir, verbose=0)
 
       @memory.cache
       def make_rname(*args):
