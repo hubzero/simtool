@@ -13,3 +13,4 @@ nbconvert==6.0.7
 Jinja2==2.11.3
 pillow==8.2.0
 sphinx==4.0.2
+markupsafe==2.0.1
