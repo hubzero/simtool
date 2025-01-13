@@ -72,7 +72,14 @@ History
 
 * Added new parameter classes Tag and File.
 * Use checksum and file size to compute sim2L run squidId.
-* Improve eapermill efficiency by reducing implicit I/O done during execution.
+* Improve papermill efficiency by reducing implicit I/O done during execution.
 * Added support for sim2L metrics collection - record hit and miss by squidid.
 * Added getParamsFromDictionary() and content() methods to standardize processing on INPUTS in sim2L notebooks.
+
+0.4.2 (2025-01-13)
+------------------
+
+* Added updateParamsFromDictionary() methods to update params with input dictionary.
+* Fixed issue with updating param units attribute.
+* Updated dependency requirement versions.
 
