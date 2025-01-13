@@ -86,7 +86,7 @@ class RunBase:
       self.dstore = None
       if not trustedExecution:
          if cache:
-            hashableInputs = _get_inputs_cache_dict(getParamsFromDictionary(inputsSchema,self.input_dict))
+            hashableInputs = _get_inputs_cache_dict(updateParamsFromDictionary(inputsSchema,self.input_dict))
             self.dstore = RunBase.DSHANDLER(simToolLocation['simToolName'],simToolLocation['simToolRevision'],hashableInputs)
             del hashableInputs
             self.cached = self.dstore.read_cache(self.outdir)

@@ -7,6 +7,7 @@
 import os
 import sys
 import re
+import copy
 import glob
 import nbformat
 import hashlib
@@ -52,6 +53,7 @@ def getParamsFromDictionary(inputs,
    try:
       parameters = parse(inputs)
    except ValueError as e:
+      parameters = {}
       print(e)
    else:
       for label in inputs:
@@ -77,6 +79,46 @@ def getParamsFromDictionary(inputs,
                pass
 
    return parameters
+
+
+def updateParamsFromDictionary(parameters,
+                               valueDictionary):
+   """Update Params objects from dictionary of values
+
+      Args:
+          parameters: Valid Params
+
+          valueDictionary: dictionary of values. valueDictionary.keys()
+                           should match parameters.keys()
+      Returns:
+          updatedParameters: dictionary of Params objects.  Each Params object
+                             represents one SimTool input or output.
+   """
+   updatedParameters = copy.deepcopy(parameters)
+   for label in valueDictionary:
+      if label in parameters:
+         value = valueDictionary[label]
+         checkForFile = False
+         if hasattr(parameters[label],'file'):
+            try:
+               if isinstance(value,basestring):
+                  checkForFile = True
+            except NameError:
+               if isinstance(value,str):
+                  checkForFile = True
+
+         if checkForFile:
+            if value.startswith('file://'):
+               updatedParameters[label].file = value[7:]
+            else:
+               updatedParameters[label].value = value
+         else:
+            try:
+               updatedParameters[label].value = value
+            except:
+               pass
+
+   return updatedParameters
 
 
 def getValidatedInputs(inputs):
