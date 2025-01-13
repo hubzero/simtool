@@ -13,6 +13,7 @@ import shutil
 import warnings
 import requests
 import traceback
+import sys
 
 class FileDataStore:
    """
@@ -200,8 +201,8 @@ class WSDataStore:
          # The signature id (squidid) is saved on the rdir variable instead of the path to the directory
          self.rdir = sid['id']
       except Exception as e:
-         print("squidId determination failed")
-         print(traceback.format_exc())
+         print("squidId determination failed",file=sys.stderr)
+#        print(traceback.format_exc())
          # If there is any error obtaining the squidid the mode is changed to global. should it be "local"?
          self.rdir = None
 
@@ -290,17 +291,25 @@ class WSDataStore:
          # Store the files on the server
 #        print("squidid: %s" % (squidid))
 #        print("files: %s" % (cacheFiles))
-         res = requests.put(self.cacheLocationRoot + "squidlist",
-                            data = {'squidid':squidid},
-                            files = cacheFiles
-                           )
-         if res.status_code != 200:
-            print("res['status_code']: %s" % (res.status_code))
-            print("res['reason']: %s" % (res.reason))
-            print("res['text']: %s" % (res.text))
+         try:
+            res = requests.put(self.cacheLocationRoot + "squidlist",
+                               data = {'squidid':squidid},
+                               files = cacheFiles
+                              )
+         except Exception as e:
+            print("Exception: %s" % (e),file=sys.stderr)
+            print("cacheLocationRoot: %s" % (self.cacheLocationRoot),file=sys.stderr)
+            print("squidid: %s" % (squidid),file=sys.stderr)
+            print("files: %s" % (cacheFiles),file=sys.stderr)
+            raise e
+         else:
+            if res.status_code != 200:
+               print("res['status_code']: %s" % (res.status_code),file=sys.stderr)
+               print("res['reason']: %s" % (res.reason),file=sys.stderr)
+               print("res['text']: %s" % (res.text),file=sys.stderr)
       except Exception as e:
 #        print("e: %s" % (e))
-         raise e;
+         raise e
       finally:
          for cacheFp in cacheFps:
             cacheFp.close()
