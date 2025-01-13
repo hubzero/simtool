@@ -9,7 +9,7 @@ import sys
 import numpy as np
 from mendeleev import element
 import PIL.Image
-from pint import UnitRegistry
+from pint import Unit,UnitRegistry
 from .encode import JsonEncoder
 
 
@@ -40,10 +40,13 @@ class Params:
         if hasattr(self, 'units'):
             units = kwargs.get('units')
             if units:
-                try:
-                    self['units'] = ureg.parse_units(units)
-                except:
-                    raise ValueError('Unrecognized units: %s' % (units))
+                if isinstance(units,Unit):
+                    self['units'] = units
+                else:
+                    try:
+                        self['units'] = ureg.parse_units(units)
+                    except:
+                        raise ValueError('Unrecognized units: %s' % (units))
         if hasattr(self, 'min'):
             self['min'] = self._getNumericValueFromQuantity(kwargs.get('min'),checkMinMax=False)
         if hasattr(self, 'max'):
