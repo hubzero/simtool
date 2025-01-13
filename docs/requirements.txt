@@ -11,3 +11,4 @@ sphinx-py3doc-enhanced-theme==2.4.0
 nbsphinx==0.4.2
 nbconvert==6.0.7
 Jinja2>=2.11.3
+pillow==8.2.0
