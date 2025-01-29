@@ -83,6 +83,7 @@ class RunBase:
          self.remoteSimTool = None
 
       self.cached = False
+      self.squidId = ""
       self.dstore = None
       if not trustedExecution:
          if cache:
@@ -283,8 +284,8 @@ class RunBase:
          print(traceback.format_exc(),file=sys.stderr)
       else:
          squidIdPath = os.path.join(self.outdir,'.squidid')
-         if(os.path.exists(squidIdPath) > 0):
-            if(os.path.getsize(squidIdPath) > 0):
+         if os.path.exists(squidIdPath):
+            if os.path.getsize(squidIdPath) > 0:
                with open(squidIdPath,'r') as fp:
                   os.environ['SIM2L_CACHE_SQUID'] = fp.read().strip()
          else:
@@ -292,6 +293,8 @@ class RunBase:
             print(os.listdir(self.outdir))
          if exitCode == 0:
             print("Found cached result = %s" % (os.environ.get('SIM2L_CACHE_SQUID','squidId does not exist')))
+            if 'SIM2L_CACHE_SQUID' in os.environ:
+               self.squidId = os.environ['SIM2L_CACHE_SQUID']
 
       self.cached = exitCode == 0
 
@@ -318,6 +321,8 @@ class RunBase:
          if exitCode != 0:
             print("SimTool execution failed")
       self.cached = exitCode == 0
+      if self.cached:
+         self.squidId = os.getenv("SIM2L_CACHE_SQUID")
 
 
    def retrieveTrustedUserResults(self,simToolLocation):
