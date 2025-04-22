@@ -130,7 +130,7 @@ class FileDataStore:
          if savedDirectory:
             cacheDirectory = os.path.join(self.rdir,savedDirectory)
             if not os.path.isdir(cacheDirectory):
-               os.mkdir(cacheDirectory)
+               os.mkdirs(cacheDirectory)
             self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),cacheDirectory)
          else:
             self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
