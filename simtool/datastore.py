@@ -91,7 +91,7 @@ class FileDataStore:
          simToolFiles = os.listdir(sdir)
          destinationDir = os.path.join(ddir,os.path.basename(sdir))
          if not os.path.isdir(destinationDir):
-            os.mkdir(destinationDir)
+            os.makedirs(destinationDir)
       else:
          sdir = os.path.dirname(os.path.realpath(os.path.abspath(spath)))
          simToolFiles = [os.path.basename(spath)]
@@ -130,7 +130,7 @@ class FileDataStore:
          if savedDirectory:
             cacheDirectory = os.path.join(self.rdir,savedDirectory)
             if not os.path.isdir(cacheDirectory):
-               os.mkdir(cacheDirectory)
+               os.makedirs(cacheDirectory)
             self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),cacheDirectory)
          else:
             self.__copySimToolTree(os.path.join(sourcedir,savedOutputFile),self.rdir)
@@ -224,7 +224,7 @@ class WSDataStore:
          if len(results) == 0:
             return False;
          if not os.path.isdir(outdir):
-            os.mkdir(outdir)
+            os.makedirs(outdir)
          # for each file on the response, download the blob
          for result in results:
             if "_._" in result['name']:
