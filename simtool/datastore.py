@@ -276,7 +276,7 @@ class WSDataStore:
             else:
                cacheFilePaths.append(cacheFilePath)
 
-         # loop all files found and change the path separtor from / to _._, flattening the path.
+         # loop all files found and change the path separator from / to _._, flattening the path.
          cacheFiles = []
          rootPath = os.path.realpath(sourcedir)
          for cacheFilePath in cacheFilePaths:
