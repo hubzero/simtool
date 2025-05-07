@@ -224,7 +224,7 @@ class WSDataStore:
          if len(results) == 0:
             return False;
          if not os.path.isdir(outdir):
-            os.mkdirs(outdir)
+            os.makedirs(outdir)
          # for each file on the response, download the blob
          for result in results:
             if "_._" in result['name']:
