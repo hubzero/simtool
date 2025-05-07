@@ -229,5 +229,5 @@ class DB(object):
         return savedOutputFiles
 
 
-DB.encoder   = JsonEncoder()  # encoder to use for serialzation
+DB.encoder   = JsonEncoder()  # encoder to use for serialization
 DB.datastore = FileDataStore  # configure to use shared filesystem as datastore
