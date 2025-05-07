@@ -628,15 +628,15 @@ class Run:
            runName: An optional name for the run.  A unique name will be generated
                if no name is supplied.
            remoteAttributes: A list of parameters used for submission to offsite
-               resource.  In the absense of remoteAttributes the notebook execution
+               resource.  In the absence of remoteAttributes the notebook execution
                will occur locally.
            cache: If the SimTool was run with the same inputs previously, return
                the results from the cache.  Otherwise cache the results.  If this
                parameter is False, do neither of these.  The SimTool must be published
                to access the global cache, otherwise each user has a local cache
-               that can be accesed.
+               that can be accessed.
            venue: [None, noSubmit, local, trustedLocal, remote, trustedRemote] venue selection mode.
-               noSubmit - to ignore presense of submit.
+               noSubmit - to ignore the presence of submit.
                local - to use 'submit --local'.
                trustedLocal - to use 'submit --local' as the trusted user for global cache interaction.
                remote - to use 'submit' to execute job on remote resource.
