@@ -37,7 +37,7 @@ import yaml
 from .db import DB
 from .experiment import get_experiment
 from .datastore import FileDataStore
-from .utils import getSimToolInputs, getSimToolOutputs, getParamsFromDictionary
+from .utils import getSimToolInputs, getSimToolOutputs, updateParamsFromDictionary
 from .utils import _get_inputs_dict, _get_extra_files, _get_inputFiles, _get_inputs_cache_dict
 
 
