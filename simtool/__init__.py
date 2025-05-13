@@ -4,7 +4,7 @@
 # @license      http://opensource.org/licenses/MIT MIT
 # @trademark    HUBzero is a registered trademark of The Regents of the University of California.
 #
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 
 from .utils import getGetSimToolNameRevisionFromEnvironment, findInstalledSimToolNotebooks, searchForSimTool
 from .utils import findInstalledSimToolNotebooks as findSimTools
