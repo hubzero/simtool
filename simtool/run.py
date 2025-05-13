@@ -689,6 +689,7 @@ class Run:
       elif venue == 'webService': 
          newclass = WebServicePrepare(simToolLocation,inputs,runName,remoteRunAttributes,cache)
       elif venue is None:
+         warnings.warn('import hubzero.submit.SubmitCommand failed',category=UserWarning)
          newclass = LocalRun(simToolLocation,inputs,runName,cache)
       else:
          raise ValueError('Bad venue/cache combination')
