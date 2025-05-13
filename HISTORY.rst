@@ -83,3 +83,11 @@ History
 * Fixed issue with updating param units attribute.
 * Updated dependency requirement versions.
 
+0.4.3 (2025-05-13)
+------------------
+
+* Spell check.
+* Allow for output in subdirectories.
+* Complete changeover from getParamsFromDictionary to updateParamsFromDictionary.
+* Add squidId to Run class.
+
