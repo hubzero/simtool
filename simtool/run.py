@@ -294,7 +294,12 @@ class RunBase:
          if exitCode == 0:
             print("Found cached result = %s" % (os.environ.get('SIM2L_CACHE_SQUID','squidId does not exist')))
             if 'SIM2L_CACHE_SQUID' in os.environ:
-               self.squidId = os.environ['SIM2L_CACHE_SQUID']
+               try:
+                  sim2LName,sim2LRevision,runHash = os.environ['SIM2L_CACHE_SQUID'].split('/')
+               except:
+                  pass
+               else:
+                  self.squidId = '/'.join([sim2LName,"r"+sim2LRevision,runHash])
 
       self.cached = exitCode == 0
 
@@ -307,7 +312,7 @@ class RunBase:
          with open(argumentsPath,'w') as fp:
             json.dump(remoteAttributes,fp)
 
-      print("Executing simTool: %s" % (os.getenv("SIM2L_CACHE_SQUID")))
+      print("Executing simTool: %s" % (os.getenv('SIM2L_CACHE_SQUID')))
       try:
          commandArgs = [os.path.join(os.sep,'apps','bin','ionhelperRunSimTool.sh'),
                         simToolLocation['simToolName'],
@@ -322,7 +327,12 @@ class RunBase:
             print("SimTool execution failed")
       self.cached = exitCode == 0
       if self.cached:
-         self.squidId = os.getenv("SIM2L_CACHE_SQUID")
+         try:
+            sim2LName,sim2LRevision,runHash = os.environ['SIM2L_CACHE_SQUID'].split('/')
+         except:
+            pass
+         else:
+            self.squidId = '/'.join([sim2LName,"r"+sim2LRevision,runHash])
 
 
    def retrieveTrustedUserResults(self,simToolLocation):
@@ -394,6 +404,34 @@ class RunBase:
 
    def read(self, name, display=False, raw=False):
       return self.db.read(name,display,raw)
+
+
+   def delete(self):
+      if self.outdir:
+         try:
+            outdir = os.path.join(get_experiment(),self.runName)
+         except:
+            pass
+         else:
+            if outdir == self.outdir:
+               shutil.rmtree(self.outdir,True)
+
+      self.nbName           = ""
+      self.inputs           = None
+      self.input_dict       = None
+      self.inputFiles       = None
+      self.outputNames      = None
+      self.runName          = ""
+      self.outname          = ""
+      self.outdir           = ""
+      self.remoteSimTool    = ""
+      self.cached           = False
+      self.squidId          = ""
+      self.dstore           = None
+      self.inputsPath       = ""
+      self.db               = None
+      self.savedOutputFiles = None
+      self.savedOutputs     = None
 
 
 class LocalRun(RunBase):

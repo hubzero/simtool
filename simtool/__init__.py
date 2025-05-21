@@ -11,4 +11,5 @@ from .utils import findInstalledSimToolNotebooks as findSimTools
 from .utils import parse, getValidatedInputs, getParamsFromDictionary, updateParamsFromDictionary
 from .utils import findSimToolNotebook, getSimToolInputs, getSimToolOutputs
 from .run import Run, DB 
+from .cachedrun import CachedRun
 from .experiment import Experiment, set_experiment, get_experiment

@@ -38,7 +38,8 @@ def parse(inputs):
 
 
 def getParamsFromDictionary(inputs,
-                            valueDictionary):
+                            valueDictionary,
+                            missingValuesAllowed=False):
    """Convert dictionary of input values to a collection of Params objects
 
       Args:
@@ -54,29 +55,39 @@ def getParamsFromDictionary(inputs,
       parameters = parse(inputs)
    except ValueError as e:
       parameters = {}
-      print(e)
+      print(e,file=sys.stderr)
    else:
+      missingValues = []
       for label in inputs:
-         value = valueDictionary[label]
-         checkForFile = False
-         if hasattr(parameters[label],'file'):
-            try:
-               if isinstance(value,basestring):
-                  checkForFile = True
-            except NameError:
-               if isinstance(value,str):
-                  checkForFile = True
-
-         if checkForFile:
-            if value.startswith('file://'):
-               parameters[label].file = value[7:]
-            else:
-               parameters[label].value = value
+         try:
+            value = valueDictionary[label]
+         except:
+            missingValues.append(label)
          else:
-            try:
-               parameters[label].value = value
-            except:
-               pass
+            checkForFile = False
+            if hasattr(parameters[label],'file'):
+               try:
+                  if isinstance(value,basestring):
+                     checkForFile = True
+               except NameError:
+                  if isinstance(value,str):
+                     checkForFile = True
+
+            if checkForFile:
+               if value.startswith('file://'):
+                  parameters[label].file = value[7:]
+               else:
+                  parameters[label].value = value
+            else:
+               try:
+                  parameters[label].value = value
+               except:
+                  pass
+
+      if not missingValuesAllowed:
+         if len(missingValues) > 0:
+            print("ERROR: missing parameters:",missingValues,file=sys.stderr)
+            parameters = {}
 
    return parameters
 
@@ -144,7 +155,7 @@ def getValidatedInputs(inputs):
    try:
       params = parse(inputs)
    except ValueError as e:
-      print(e)
+      print(e,file=sys.stderr)
    else:
       for param in params:
          validatedInputs[param] = params[param].value

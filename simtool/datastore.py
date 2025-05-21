@@ -184,26 +184,48 @@ class WSDataStore:
    """
    A data store implemented as a web service.
    """
-   def __init__(self,simtoolName,simtoolRevision,inputs,cacheLocationRoot):
+   def __init__(self,simtoolName,simtoolRevision,cacheLocationRoot,inputs=None,squidId=None):
 
       self.cacheLocationRoot = cacheLocationRoot.rstrip('/') + '/'
 
-      try:
-         # Request the signature for the set of inputs
-         squidid = requests.get(self.cacheLocationRoot + "squidid",
-                                headers = {'Content-Type': 'application/json'},
-                                data = json.dumps({'simtoolName':simtoolName,
-                                                   'simtoolRevision':simtoolRevision,
-                                                   'inputs':inputs}
-                                                 )
-                               )
-         sid = squidid.json()
-         # The signature id (squidid) is saved on the rdir variable instead of the path to the directory
-         self.rdir = sid['id']
-      except Exception as e:
-         print("squidId determination failed",file=sys.stderr)
-#        print(traceback.format_exc())
-         # If there is any error obtaining the squidid the mode is changed to global. should it be "local"?
+      if   squidId:
+         hashId = squidId.split('/')[-1]
+         if '/'.join([simtoolName,simtoolRevision,hashId]) == squidId:
+            try:
+               cachefile = requests.get(self.cacheLocationRoot + "squidlist",
+                                        headers = {'Content-Type': 'application/json'},
+                                        data = json.dumps({'squidid':squidId})
+                                       )
+               results = cachefile.json()
+               if len(results) == 0:
+                  self.rdir = None
+               else:
+                  self.rdir = squidId
+            except Exception as e:
+               print("squidId match does not exist",file=sys.stderr)
+               self.rdir = None
+         else:
+            self.rdir = None
+      elif inputs:
+         try:
+            # Request the signature for the set of inputs
+            squidid = requests.get(self.cacheLocationRoot + "squidid",
+                                   headers = {'Content-Type': 'application/json'},
+                                   data = json.dumps({'simtoolName':simtoolName,
+                                                      'simtoolRevision':simtoolRevision,
+                                                      'inputs':inputs}
+                                                    )
+                                  )
+            sid = squidid.json()
+            # The signature id (squidid) is saved on the rdir variable instead of the path to the directory
+            self.rdir = sid['id']
+         except Exception as e:
+            print("squidId determination failed",file=sys.stderr)
+#           print(traceback.format_exc())
+            # If there is any error obtaining the squidid the mode is changed to global. should it be "local"?
+            self.rdir = None
+      else:
+         print("Either inputs or squidId must be specified",file=sys.stderr)
          self.rdir = None
 
 
