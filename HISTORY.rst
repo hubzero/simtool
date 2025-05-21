@@ -91,3 +91,8 @@ History
 * Complete changeover from getParamsFromDictionary to updateParamsFromDictionary.
 * Add squidId to Run class.
 
+0.4.4 (2025-05-21)
+------------------
+
+* Added CacheRun class for fetching results from cache.
+
